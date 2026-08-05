@@ -1,0 +1,30 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Pace LLM Observability API",
+    "version": "0.1.0",
+    "description": "Self-hosted telemetry and cost tracking API for LLM providers"
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "summary": "Health check endpoint",
+        "responses": {
+          "200": {
+            "description": "Server status"
+          }
+        }
+      }
+    },
+    "/v1/ingest/events": {
+      "post": {
+        "summary": "Ingest single or batch usage events",
+        "responses": {
+          "200": {
+            "description": "Event acceptance status"
+          }
+        }
+      }
+    }
+  }
+}
