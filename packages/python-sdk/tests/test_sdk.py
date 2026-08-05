@@ -125,4 +125,14 @@ def test_pace_client_context_manager_and_tags():
 
     # Verified context manager entered, tracked call executed, and flushed gracefully
 
+from pace.attributes import AttributeBuilder
+
+def test_attribute_builder():
+    builder = AttributeBuilder({"initial": "val"})
+    attrs = builder.set_environment("production").set_user_id("user_42").set_session_id("sess_99").build()
+    assert attrs["initial"] == "val"
+    assert attrs["environment"] == "production"
+    assert attrs["user_id"] == "user_42"
+    assert attrs["session_id"] == "sess_99"
+
 
