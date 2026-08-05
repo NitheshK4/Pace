@@ -192,6 +192,33 @@ async def get_breakdown(
 
     return BreakdownResponse(by_provider=by_provider, by_model=by_model)
 
+@router.get("/summary")
+async def get_analytics_summary(
+    project_id: str = Query(...),
+    start_time: Optional[datetime] = Query(None),
+    end_time: Optional[datetime] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    await check_project_access(project_id, current_user.id, db)
+    start, end = parse_time_range(start_time, end_time)
+
+    top_provider_stmt = (
+        select(UsageEvent.provider, func.sum(UsageEvent.input_tokens + UsageEvent.output_tokens).label("total_tokens"))
+        .where(UsageEvent.project_id == project_id, UsageEvent.time >= start, UsageEvent.time <= end)
+        .group_by(UsageEvent.provider)
+        .order_by(desc("total_tokens"))
+        .limit(1)
+    )
+    p_res = await db.execute(top_provider_stmt)
+    top_p_row = p_res.first()
+
+    return {
+        "project_id": project_id,
+        "top_provider": top_p_row.provider if top_p_row else None,
+        "top_provider_tokens": top_p_row.total_tokens if top_p_row else 0
+    }
+
 @router.get("/events", response_model=EventsListResponse)
 async def list_events(
     project_id: str = Query(...),
