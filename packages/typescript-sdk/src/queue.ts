@@ -91,6 +91,10 @@ export class ResilientTelemetryQueue {
     return { pendingEvents: this.queue.length };
   }
 
+  public clear(): void {
+    this.queue = [];
+  }
+
   public stop(): void {
     if (this.timer) {
       clearInterval(this.timer);
