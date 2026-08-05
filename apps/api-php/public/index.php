@@ -12,6 +12,8 @@ use PaceApi\Services\BudgetService;
 use PaceApi\Services\AnomalyDetector;
 use PaceApi\Services\CsvExporter;
 
+$startTime = microtime(true);
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -21,6 +23,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
+
+register_shutdown_function(function() use ($startTime) {
+    $durationMs = round((microtime(true) - $startTime) * 1000, 2);
+    if (!headers_sent()) {
+        header("X-Response-Time-Ms: {$durationMs}");
+    }
+});
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
