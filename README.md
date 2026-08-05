@@ -364,8 +364,8 @@ GET  /v1/exports/csv?project_id=...
 ```bash
 GET  /healthz                       # Health check
 GET  /metrics                       # Prometheus
-GET  /v1/system/diagnostics         # DB stats
-POST /v1/system/retention/purge     # Cleanup
+GET  /v1/system/diagnostics         # DB stats & uptime
+POST /v1/system/retention-purge     # Purge old telemetry
 ```
 </details>
 
