@@ -33,6 +33,7 @@ async def test_system_health_and_diagnostics():
         health_res = await ac.get("/healthz")
         assert health_res.status_code == 200
         assert health_res.json()["status"] == "healthy"
+        assert "uptime_seconds" in health_res.json()
 
         metrics_res = await ac.get("/metrics")
         assert metrics_res.status_code == 200
