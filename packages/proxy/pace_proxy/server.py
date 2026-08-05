@@ -142,6 +142,7 @@ async def proxy_forward(request: Request, provider_path: str):
 
             resp_headers = clean_headers(dict(resp.headers))
             resp_headers["x-pace-proxy-latency-ms"] = str(latency_ms)
+            resp_headers["x-pace-proxy-version"] = "0.1.0"
             return Response(content=resp.content, status_code=resp.status_code, headers=resp_headers)
 
     except Exception as exc:
