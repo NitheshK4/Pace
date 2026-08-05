@@ -28,7 +28,7 @@ jobs:
 
       - name: Run Pytest
         run: |
-          PYTHONPATH=apps/api:packages/python-sdk pytest apps/api/tests packages/python-sdk/tests
+          PYTHONPATH=apps/api:packages/python-sdk:packages/proxy pytest apps/api/tests packages/python-sdk/tests packages/proxy/tests
 
   typescript-sdk-tests:
     name: Build & Test TypeScript SDK
