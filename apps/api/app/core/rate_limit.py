@@ -24,6 +24,12 @@ class RateLimiter:
         self.history[client_identifier].append(now)
         return True
 
+    def get_remaining(self, client_identifier: str) -> int:
+        now = time.time()
+        window_start = now - 60.0
+        timestamps = [t for t in self.history[client_identifier] if t > window_start]
+        return max(0, self.requests_per_minute - len(timestamps))
+
 ingest_rate_limiter = RateLimiter(requests_per_minute=300)
 auth_rate_limiter = RateLimiter(requests_per_minute=30)
 
