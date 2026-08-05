@@ -24,6 +24,11 @@ class PaceClient {
         $this->defaultMetadata = $defaultMetadata;
     }
 
+    public function setSystemTag(string $key, string $value): self {
+        $this->defaultMetadata['tags'][$key] = $value;
+        return $this;
+    }
+
     /**
      * Records a single LLM telemetry event.
      *
