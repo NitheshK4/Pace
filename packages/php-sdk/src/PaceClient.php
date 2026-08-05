@@ -55,6 +55,39 @@ class PaceClient {
     }
 
     /**
+     * Records multiple LLM telemetry events in a single batch request.
+     *
+     * @param array $events Array of event arrays
+     * @return array Ingestion response array
+     */
+    public function recordBatch(array $events): array {
+        $formattedEvents = [];
+        foreach ($events as $data) {
+            $eventId = $data['event_id'] ?? ('evt_' . bin2hex(random_bytes(10)));
+            $metadata = array_merge($this->defaultMetadata, $data['metadata'] ?? []);
+            $sanitizedMetadata = $this->sanitizeMetadata($metadata);
+
+            $formattedEvents[] = [
+                'event_id'             => $eventId,
+                'time'                 => $data['time'] ?? gmdate('Y-m-d\TH:i:s\Z'),
+                'provider'             => strtolower($data['provider'] ?? 'openai'),
+                'model'                => $data['model'] ?? 'unknown',
+                'endpoint'             => $data['endpoint'] ?? '/v1/chat/completions',
+                'input_tokens'         => (int)($data['input_tokens'] ?? 0),
+                'output_tokens'        => (int)($data['output_tokens'] ?? 0),
+                'cached_input_tokens'  => (int)($data['cached_input_tokens'] ?? 0),
+                'reasoning_tokens'     => (int)($data['reasoning_tokens'] ?? 0),
+                'cost_usd'             => isset($data['cost_usd']) ? (float)$data['cost_usd'] : null,
+                'latency_ms'           => (int)($data['latency_ms'] ?? 0),
+                'status_code'          => (int)($data['status_code'] ?? 200),
+                'metadata'             => !empty($sanitizedMetadata) ? $sanitizedMetadata : null
+            ];
+        }
+
+        return $this->sendHttpRequest('/v1/ingest/events', ['events' => $formattedEvents]);
+    }
+
+    /**
      * Sanitizes sensitive fields from metadata to enforce zero prompt storage.
      */
     public function sanitizeMetadata(array $metadata): array {
