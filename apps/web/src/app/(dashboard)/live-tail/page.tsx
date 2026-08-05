@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
 import { formatINR } from '@/lib/currency';
-import { Radio, Pause, Play, Wifi, WifiOff, Trash2 } from 'lucide-react';
+import { Radio, Pause, Play, Wifi, WifiOff, Trash2, Terminal } from 'lucide-react';
 
 interface LiveEvent {
   id: string;
@@ -69,56 +69,56 @@ export default function LiveTailPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-pace-border pb-5">
         <div>
-          <h2 className="text-2xl font-bold text-white flex items-center space-x-2">
-            <Radio className="w-6 h-6 text-pace-accent animate-pulse" />
-            <span>Live Tail Feed</span>
+          <h2 className="text-xl font-mono font-extrabold text-white tracking-wider uppercase flex items-center space-x-2.5">
+            <Radio className="w-5 h-5 text-pace-lime animate-pulse" />
+            <span>Live Telemetry Tail Stream</span>
           </h2>
-          <p className="text-sm text-pace-muted mt-0.5">Real-time SSE event stream for live LLM usage monitoring.</p>
+          <p className="text-xs text-pace-muted font-mono mt-1">Real-time SSE event stream for live LLM model execution.</p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 font-mono text-xs">
           {/* Connection Status Badge */}
-          <div className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
-            isConnected ? 'bg-pace-success/10 text-pace-success border border-pace-success/30' : 'bg-pace-warning/10 text-pace-warning border border-pace-warning/30'
+          <div className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl font-bold ${
+            isConnected ? 'bg-pace-emerald/10 text-pace-emerald border border-pace-emerald/30' : 'bg-pace-amber/10 text-pace-amber border border-pace-amber/30'
           }`}>
             {isConnected ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
-            <span>{isConnected ? 'STREAM CONNECTED' : 'RECONNECTING'}</span>
+            <span>{isConnected ? 'STREAM ACTIVE' : 'RECONNECTING'}</span>
           </div>
 
           {/* Pause / Play toggle */}
           <button
             onClick={() => setIsPaused(!isPaused)}
-            className="bg-pace-surface border border-pace-border hover:bg-pace-border text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg flex items-center space-x-1.5 transition"
+            className="bg-pace-surface border border-pace-border hover:border-pace-lime text-white font-bold px-3.5 py-1.5 rounded-xl flex items-center space-x-1.5 transition"
           >
-            {isPaused ? <Play className="w-3.5 h-3.5 text-pace-success" /> : <Pause className="w-3.5 h-3.5 text-pace-warning" />}
-            <span>{isPaused ? 'Resume Stream' : 'Pause Stream'}</span>
+            {isPaused ? <Play className="w-3.5 h-3.5 text-pace-emerald" /> : <Pause className="w-3.5 h-3.5 text-pace-amber" />}
+            <span>{isPaused ? 'RESUME STREAM' : 'PAUSE STREAM'}</span>
           </button>
 
           {/* Clear Feed */}
           <button
             onClick={() => setEvents([])}
-            className="bg-pace-surface border border-pace-border hover:bg-pace-border text-pace-muted hover:text-white text-xs px-3 py-1.5 rounded-lg flex items-center space-x-1 transition"
+            className="bg-pace-surface border border-pace-border hover:text-white text-pace-muted px-3 py-1.5 rounded-xl flex items-center space-x-1 transition"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>Clear</span>
+            <span>CLEAR</span>
           </button>
         </div>
       </div>
 
       {/* Filter Tabs Bar */}
-      <div className="bg-pace-surface border border-pace-border rounded-xl p-3 flex items-center justify-between">
+      <div className="bg-pace-surface border border-pace-border rounded-2xl p-3.5 flex items-center justify-between font-mono text-xs shadow-lg">
         <div className="flex items-center space-x-2">
-          <span className="text-xs text-pace-muted font-semibold mr-2">Filter Status:</span>
+          <span className="text-pace-muted font-bold mr-2 uppercase">Filter Status:</span>
           {(['all', '2xx', '429', '5xx'] as const).map((mode) => (
             <button
               key={mode}
               onClick={() => setStatusFilter(mode)}
-              className={`px-3 py-1 rounded-lg text-xs font-bold uppercase transition ${
+              className={`px-3 py-1 rounded-lg font-bold uppercase transition ${
                 statusFilter === mode
-                  ? 'bg-pace-accent text-pace-bg shadow'
+                  ? 'bg-pace-lime text-pace-bg shadow'
                   : 'bg-pace-bg border border-pace-border text-pace-muted hover:text-white'
               }`}
             >
@@ -126,17 +126,18 @@ export default function LiveTailPage() {
             </button>
           ))}
         </div>
-        <div className="text-xs text-pace-muted font-mono">
-          Feed events: {events.length}
+        <div className="text-pace-muted">
+          Feed events: <strong className="text-white">{events.length}</strong>
         </div>
       </div>
 
-      {/* Stream Events Box */}
-      <div className="bg-pace-surface border border-pace-border rounded-xl p-5 shadow-2xl space-y-3 font-mono text-xs max-h-[600px] overflow-y-auto">
+      {/* Stream Events Terminal Box */}
+      <div className="bg-pace-surface border border-pace-border rounded-2xl p-5 shadow-2xl space-y-3 font-mono text-xs max-h-[600px] overflow-y-auto">
         {events.length === 0 ? (
-          <div className="p-8 text-center text-pace-muted space-y-2">
-            <Radio className="w-6 h-6 animate-spin mx-auto text-pace-accent" />
-            <div>Listening for incoming telemetry events...</div>
+          <div className="p-12 text-center text-pace-muted space-y-3">
+            <Terminal className="w-8 h-8 animate-pulse mx-auto text-pace-lime" />
+            <div className="text-white font-bold">LISTENING FOR INCOMING TELEMETRY SIGNALS...</div>
+            <div className="text-[11px] text-pace-muted">Events will populate in real-time as your application makes LLM requests.</div>
           </div>
         ) : (
           events
@@ -149,11 +150,11 @@ export default function LiveTailPage() {
             .map((ev) => (
               <div
                 key={ev.id}
-                className="bg-pace-bg border border-pace-border/60 p-3.5 rounded-lg flex flex-wrap items-center justify-between gap-3 animate-fade-in hover:border-pace-accent/50 transition"
+                className="bg-pace-bg border border-pace-border/70 p-3.5 rounded-xl flex flex-wrap items-center justify-between gap-3 animate-fade-in hover:border-pace-lime/50 transition shadow-inner"
               >
                 <div className="flex items-center space-x-3">
                   <span className="text-pace-muted">{new Date(ev.time).toLocaleTimeString()}</span>
-                  <span className="bg-pace-accent/10 border border-pace-accent/30 text-pace-accent px-2 py-0.5 rounded uppercase text-[10px] font-bold">
+                  <span className="bg-pace-surface border border-pace-border text-pace-lime px-2 py-0.5 rounded uppercase text-[10px] font-bold">
                     {ev.provider}
                   </span>
                   <span className="text-white font-bold">{ev.model}</span>
@@ -162,12 +163,12 @@ export default function LiveTailPage() {
                 <div className="flex items-center space-x-4">
                   <span>In: <strong className="text-white">{ev.input_tokens}</strong></span>
                   <span>Out: <strong className="text-white">{ev.output_tokens}</strong></span>
-                  <span className="text-pace-success font-bold">
+                  <span className="text-pace-lime font-bold">
                     {ev.cost_usd !== null ? formatINR(ev.cost_usd, 4) : 'NULL'}
                   </span>
                   <span>{ev.latency_ms} ms</span>
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    ev.status_code < 400 ? 'bg-pace-success/20 text-pace-success' : 'bg-pace-danger/20 text-pace-danger'
+                    ev.status_code < 400 ? 'bg-pace-emerald/10 border border-pace-emerald/30 text-pace-emerald' : 'bg-pace-coral/10 border border-pace-coral/30 text-pace-coral'
                   }`}>
                     {ev.status_code}
                   </span>
