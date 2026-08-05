@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
-import { Code2, Copy, Check, Send, Sparkles, Terminal, CheckCircle2 } from 'lucide-react';
+import { Code2, Copy, Check, Send, Sparkles, Terminal, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 export default function QuickStartPage() {
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -107,26 +107,26 @@ echo "Telemetry event successfully sent to Pace!\\n";`
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div>
-        <h2 className="text-2xl font-bold text-white flex items-center space-x-2">
-          <Code2 className="w-6 h-6 text-pace-accent" />
+    <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
+      <div className="border-b border-pace-border pb-5">
+        <h2 className="text-xl font-mono font-extrabold text-white tracking-wider uppercase flex items-center space-x-2.5">
+          <Code2 className="w-5 h-5 text-pace-lime" />
           <span>SDK Quick Start Guide</span>
         </h2>
-        <p className="text-sm text-pace-muted mt-1">
-          Instrument your LLM apps across Python, TypeScript, or PHP. Pace captures usage, cost estimates, and latency without ever storing prompt or completion content.
+        <p className="text-xs text-pace-muted font-mono mt-1">
+          Instrument your LLM applications across Python, TypeScript, or PHP. Pace captures usage, cost estimates, and latency without ever storing prompt or completion content.
         </p>
       </div>
 
       {/* Language Switcher Tabs */}
-      <div className="flex space-x-2 border-b border-pace-border pb-3">
+      <div className="flex space-x-2 border-b border-pace-border pb-3 font-mono">
         {(['python', 'typescript', 'php'] as const).map((lang) => (
           <button
             key={lang}
             onClick={() => setActiveTab(lang)}
-            className={`px-4 py-2 text-xs font-bold rounded-lg uppercase tracking-wider transition ${
+            className={`px-4 py-2 text-xs font-bold rounded-xl uppercase tracking-wider transition ${
               activeTab === lang
-                ? 'bg-pace-accent text-pace-bg shadow-md'
+                ? 'bg-pace-lime text-pace-bg shadow-lg shadow-pace-lime/10'
                 : 'bg-pace-surface border border-pace-border text-pace-muted hover:text-white'
             }`}
           >
@@ -136,21 +136,21 @@ echo "Telemetry event successfully sent to Pace!\\n";`
       </div>
 
       {/* Step 1: Install Package */}
-      <div className="bg-pace-surface border border-pace-border rounded-xl p-6 space-y-3">
-        <div className="flex items-center space-x-2 text-white font-semibold text-base">
-          <span className="w-6 h-6 rounded-full bg-pace-accent text-xs flex items-center justify-center font-bold text-pace-bg">1</span>
+      <div className="bg-pace-surface border border-pace-border rounded-2xl p-6 space-y-3 shadow-xl">
+        <div className="flex items-center space-x-3 text-white font-mono font-bold text-sm">
+          <span className="w-6 h-6 rounded-lg bg-pace-lime text-xs flex items-center justify-center font-bold text-pace-bg">1</span>
           <span className="capitalize">Install {activeTab} Package</span>
         </div>
-        <div className="bg-pace-bg border border-pace-border rounded-lg p-3.5 flex items-center justify-between font-mono text-sm">
-          <span className="text-pace-accent">{installCommands[activeTab]}</span>
+        <div className="bg-pace-bg border border-pace-border rounded-xl p-4 flex items-center justify-between font-mono text-xs shadow-inner">
+          <span className="text-pace-lime font-bold">{installCommands[activeTab]}</span>
         </div>
       </div>
 
       {/* Step 2: Code Instrumentation */}
-      <div className="bg-pace-surface border border-pace-border rounded-xl p-6 space-y-4">
+      <div className="bg-pace-surface border border-pace-border rounded-2xl p-6 space-y-4 shadow-xl">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 text-white font-semibold text-base">
-            <span className="w-6 h-6 rounded-full bg-pace-accent text-xs flex items-center justify-center font-bold text-pace-bg">2</span>
+          <div className="flex items-center space-x-3 text-white font-mono font-bold text-sm">
+            <span className="w-6 h-6 rounded-lg bg-pace-lime text-xs flex items-center justify-center font-bold text-pace-bg">2</span>
             <span className="capitalize">{activeTab} Client Integration</span>
           </div>
           <button
@@ -159,36 +159,36 @@ echo "Telemetry event successfully sent to Pace!\\n";`
               setCopiedCode(true);
               setTimeout(() => setCopiedCode(false), 2000);
             }}
-            className="text-xs bg-pace-border hover:bg-pace-border/80 text-white px-3 py-1.5 rounded-lg flex items-center space-x-1"
+            className="text-xs font-mono font-bold bg-pace-bg hover:bg-pace-surfaceHover text-white px-3.5 py-2 rounded-xl flex items-center space-x-1.5 border border-pace-border transition"
           >
-            {copiedCode ? <Check className="w-3.5 h-3.5 text-pace-success" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copiedCode ? 'Copied' : 'Copy Code'}</span>
+            {copiedCode ? <Check className="w-3.5 h-3.5 text-pace-emerald" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{copiedCode ? 'COPIED' : 'COPY CODE'}</span>
           </button>
         </div>
-        <pre className="bg-pace-bg border border-pace-border rounded-lg p-4 font-mono text-xs text-pace-text overflow-x-auto leading-relaxed">
+        <pre className="bg-pace-bg border border-pace-border rounded-xl p-4 font-mono text-xs text-pace-text overflow-x-auto leading-relaxed shadow-inner">
           {codeSnippets[activeTab]}
         </pre>
       </div>
 
-      {/* Step 4: Verification */}
-      <div className="bg-pace-surface border border-pace-border rounded-xl p-6 space-y-4">
+      {/* Step 3: Verification */}
+      <div className="bg-pace-surface border border-pace-border rounded-2xl p-6 space-y-4 shadow-xl">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-white text-base">Verify Integration</h3>
-            <p className="text-xs text-pace-muted mt-0.5">Test ingestion directly against your project to verify pipeline health.</p>
+            <h3 className="font-mono font-bold text-white text-sm uppercase">Verify Ingestion Pipeline</h3>
+            <p className="text-xs text-pace-muted font-mono mt-0.5">Test ingestion directly against your active project to verify pipeline health.</p>
           </div>
           <button
             onClick={handleSendTestEvent}
             disabled={loading || !projectId}
-            className="bg-pace-success hover:bg-emerald-600 text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center space-x-2 transition"
+            className="bg-pace-emerald hover:bg-emerald-600 text-white text-xs font-mono font-bold px-5 py-2.5 rounded-xl flex items-center space-x-2 transition shadow-lg shadow-pace-emerald/20"
           >
             <Send className="w-3.5 h-3.5" />
-            <span>{loading ? 'Sending Test...' : 'Send Test Event'}</span>
+            <span>{loading ? 'SENDING TEST...' : 'SEND TEST EVENT →'}</span>
           </button>
         </div>
 
         {testStatus && (
-          <div className="p-3 bg-pace-success/10 border border-pace-success/20 rounded-lg text-xs text-pace-success flex items-center space-x-2">
+          <div className="p-3.5 bg-pace-emerald/10 border border-pace-emerald/30 rounded-xl text-xs font-mono text-pace-emerald flex items-center space-x-2">
             <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
             <span>{testStatus}</span>
           </div>
