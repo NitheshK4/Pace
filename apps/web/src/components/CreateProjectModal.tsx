@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { X, Sparkles } from 'lucide-react';
+import { X, Sparkles, FolderPlus } from 'lucide-react';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -38,30 +38,44 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-pace-surface border border-pace-border w-full max-w-md rounded-xl p-6 shadow-2xl space-y-4">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-pace-surface border border-pace-border w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-5 relative overflow-hidden">
+        {/* Top Glow Accent Bar */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-pace-lime to-pace-lavender" />
+
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Sparkles className="w-5 h-5 text-pace-accent" />
-            <h3 className="font-bold text-lg text-white">Create New Project</h3>
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-xl bg-pace-lime/10 border border-pace-lime/30 flex items-center justify-center">
+              <FolderPlus className="w-5 h-5 text-pace-lime" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg text-white">Create New Project</h3>
+              <p className="text-xs text-pace-muted font-mono">TELEMETRY INGESTION DOMAIN</p>
+            </div>
           </div>
-          <button onClick={onClose} className="text-pace-muted hover:text-white">
+          <button onClick={onClose} className="text-pace-muted hover:text-white p-1 rounded-lg hover:bg-pace-bg">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {error && <div className="text-sm text-pace-danger bg-pace-danger/10 p-3 rounded-lg border border-pace-danger/20">{error}</div>}
+        {error && (
+          <div className="text-xs text-pace-coral bg-pace-coral/10 p-3.5 rounded-xl border border-pace-coral/20 font-mono">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-pace-muted mb-1 uppercase tracking-wider">Project Name</label>
+            <label className="block text-xs font-mono font-bold text-pace-muted mb-1.5 uppercase tracking-wider">
+              Project Name
+            </label>
             <input
               type="text"
               required
               placeholder="e.g. Customer Support AI Agent"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-pace-bg border border-pace-border rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-pace-accent"
+              className="w-full bg-pace-bg border border-pace-border rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pace-lime font-mono shadow-inner"
             />
           </div>
 
@@ -69,16 +83,16 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm text-pace-muted hover:text-white font-medium"
+              className="px-4 py-2.5 text-xs text-pace-muted hover:text-white font-mono font-bold"
             >
-              Cancel
+              CANCEL
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="bg-pace-accent hover:bg-pace-accentHover text-white text-sm font-semibold px-4 py-2 rounded-lg transition"
+              className="bg-pace-lime hover:bg-pace-accentHover text-pace-bg text-xs font-mono font-bold px-5 py-2.5 rounded-xl transition shadow-lg shadow-pace-lime/20"
             >
-              {loading ? 'Creating...' : 'Create Project'}
+              {loading ? 'CREATING...' : 'CREATE PROJECT →'}
             </button>
           </div>
         </form>
