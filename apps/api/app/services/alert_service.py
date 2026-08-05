@@ -65,7 +65,7 @@ class AlertDeliveryService:
                 error_msg = str(e)
         else:
             # Console destination logging
-            logger.info(f"[PACE ALERT DISPATCHED] {event_type} - Project: {project_id} - Observed: {observed_value} / Limit: {limit_value}")
+            logger.info(f"[PACE ALERT DISPATCHED] [{severity.upper()}] {event_type} - Project: {project_id} - Observed: {observed_value} / Limit: {limit_value}")
 
         delivery = AlertDelivery(
             project_id=project_id,
