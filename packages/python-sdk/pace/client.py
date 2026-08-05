@@ -136,6 +136,10 @@ class PaceClient:
         if self.queue:
             self.queue.flush(timeout=timeout)
 
+    def shutdown(self, timeout: float = 5.0):
+        if self.queue:
+            self.queue.stop(timeout=timeout)
+
     def __enter__(self):
         return self
 
