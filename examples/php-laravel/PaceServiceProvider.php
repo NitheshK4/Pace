@@ -15,8 +15,9 @@ class PaceServiceProvider extends ServiceProvider {
                 endpoint: config('pace.endpoint'),
                 timeout: config('pace.timeout', 3),
                 defaultMetadata: [
-                    'environment' => config('app.env'),
-                    'framework'   => 'laravel'
+                    'environment'       => config('app.env'),
+                    'framework'         => 'laravel',
+                    'framework_version' => $this->app->version()
                 ]
             );
         });
