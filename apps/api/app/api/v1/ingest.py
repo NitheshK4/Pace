@@ -110,6 +110,12 @@ async def ingest_events(
     else:
         events_list = payload
 
+    if len(events_list) > 500:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Batch payload size exceeds maximum limit of 500 events per request."
+        )
+
     accepted_count = 0
     duplicate_count = 0
     rejected_count = 0
