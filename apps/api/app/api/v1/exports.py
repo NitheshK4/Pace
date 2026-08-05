@@ -15,6 +15,7 @@ router = APIRouter(prefix="/exports", tags=["Exports"])
 @router.get("/csv")
 async def export_events_csv(
     project_id: str = Query(...),
+    provider: Optional[str] = Query(None),
     start_time: Optional[datetime] = Query(None),
     end_time: Optional[datetime] = Query(None),
     current_user: User = Depends(get_current_user),
@@ -23,6 +24,8 @@ async def export_events_csv(
     await check_project_access(project_id, current_user.id, db)
     
     stmt = select(UsageEvent).where(UsageEvent.project_id == project_id)
+    if provider:
+        stmt = stmt.where(UsageEvent.provider == provider.lower())
     if start_time:
         stmt = stmt.where(UsageEvent.time >= start_time)
     if end_time:
