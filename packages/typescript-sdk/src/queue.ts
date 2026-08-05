@@ -17,6 +17,7 @@ export interface PaceOptions {
   batchSize?: number;
   flushIntervalMs?: number;
   maxQueueSize?: number;
+  onError?: (err: Error) => void;
 }
 
 export class ResilientTelemetryQueue {
@@ -29,12 +30,15 @@ export class ResilientTelemetryQueue {
   private timer: ReturnType<typeof setInterval> | null = null;
   private isFlushing = false;
 
+  private onError?: (err: Error) => void;
+
   constructor(options: PaceOptions) {
     this.apiKey = options.apiKey;
     this.endpoint = (options.endpoint || 'http://localhost:8000').replace(/\/$/, '');
     this.batchSize = options.batchSize || 20;
     this.flushIntervalMs = options.flushIntervalMs || 2000;
     this.maxQueueSize = options.maxQueueSize || 1000;
+    this.onError = options.onError;
 
     this.startPeriodicFlush();
   }
