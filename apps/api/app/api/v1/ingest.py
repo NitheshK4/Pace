@@ -61,35 +61,47 @@ async def calculate_event_cost(
     cached_tokens: int,
     reasoning_tokens: int,
     supplied_cost: Optional[Decimal],
+    pricing_cache: dict,
     db: AsyncSession
 ) -> Tuple[Optional[Decimal], str]:
     if supplied_cost is not None:
         return supplied_cost, "supplied_by_client"
 
-    # Search for matching pricing rate
-    stmt = select(PricingRate).where(
-        PricingRate.provider == provider.lower(),
-        PricingRate.model == model.lower(),
-        PricingRate.is_deprecated == False
-    ).order_by(PricingRate.effective_from.desc())
-    res = await db.execute(stmt)
-    rate = res.scalar_one_or_none()
+    p_key = provider.lower()
+    m_key = model.lower()
+    cache_key = (p_key, m_key)
 
-    if not rate:
-        # Try fallback prefix match or wildcards e.g. gpt-4o-2024-05-13 -> gpt-4o
-        base_model = model.lower().split('-202')[0]
-        stmt2 = select(PricingRate).where(
-            PricingRate.provider == provider.lower(),
-            PricingRate.model == base_model,
+    if cache_key in pricing_cache:
+        rate = pricing_cache[cache_key]
+    else:
+        stmt = select(PricingRate).where(
+            PricingRate.provider == p_key,
+            PricingRate.model == m_key,
             PricingRate.is_deprecated == False
-        )
-        res2 = await db.execute(stmt2)
-        rate = res2.scalar_one_or_none()
+        ).order_by(PricingRate.effective_from.desc())
+        res = await db.execute(stmt)
+        rate = res.scalar_one_or_none()
+
+        if not rate:
+            base_model = m_key.split('-202')[0]
+            base_cache_key = (p_key, base_model)
+            if base_cache_key in pricing_cache:
+                rate = pricing_cache[base_cache_key]
+            else:
+                stmt2 = select(PricingRate).where(
+                    PricingRate.provider == p_key,
+                    PricingRate.model == base_model,
+                    PricingRate.is_deprecated == False
+                )
+                res2 = await db.execute(stmt2)
+                rate = res2.scalar_one_or_none()
+                pricing_cache[base_cache_key] = rate
+
+        pricing_cache[cache_key] = rate
 
     if not rate:
         return None, "unknown_model"
 
-    # Calculate Decimal cost
     in_cost = (Decimal(input_tokens) / Decimal(1000)) * Decimal(str(rate.input_cost_per_1k))
     out_cost = (Decimal(output_tokens) / Decimal(1000)) * Decimal(str(rate.output_cost_per_1k))
     cache_cost = (Decimal(cached_tokens) / Decimal(1000)) * Decimal(str(rate.cache_read_cost_per_1k))
@@ -121,14 +133,32 @@ async def ingest_events(
     duplicate_count = 0
     rejected_count = 0
 
+    # 1. Bulk pre-fetch active pricing rates in one query
+    pricing_cache = {}
+    rates_stmt = select(PricingRate).where(PricingRate.is_deprecated == False).order_by(PricingRate.effective_from.desc())
+    rates_res = await db.execute(rates_stmt)
+    for rate in rates_res.scalars().all():
+        p = rate.provider.lower()
+        m = rate.model.lower()
+        key = (p, m)
+        if key not in pricing_cache:
+            pricing_cache[key] = rate
+        base_m = m.split('-202')[0]
+        base_key = (p, base_m)
+        if base_key not in pricing_cache:
+            pricing_cache[base_key] = rate
+
+    # 2. Bulk pre-fetch duplicate event_ids in one query
+    event_ids = [ev.event_id for ev in events_list]
+    existing_dup_stmt = select(UsageEvent.event_id).where(
+        UsageEvent.project_id == api_key.project_id,
+        UsageEvent.event_id.in_(event_ids)
+    )
+    existing_dup_res = await db.execute(existing_dup_stmt)
+    existing_dup_set = set(existing_dup_res.scalars().all())
+
     for ev in events_list:
-        # Pre-check idempotency
-        dup_stmt = select(UsageEvent).where(
-            UsageEvent.project_id == api_key.project_id,
-            UsageEvent.event_id == ev.event_id
-        )
-        dup_res = await db.execute(dup_stmt)
-        if dup_res.scalar_one_or_none():
+        if ev.event_id in existing_dup_set:
             duplicate_count += 1
             continue
 
@@ -140,6 +170,7 @@ async def ingest_events(
             cached_tokens=ev.cached_input_tokens,
             reasoning_tokens=ev.reasoning_tokens,
             supplied_cost=ev.cost_usd,
+            pricing_cache=pricing_cache,
             db=db
         )
 
@@ -167,6 +198,7 @@ async def ingest_events(
             async with db.begin_nested():
                 db.add(db_event)
                 await db.flush()
+            existing_dup_set.add(ev.event_id)
             accepted_count += 1
         except IntegrityError:
             duplicate_count += 1
