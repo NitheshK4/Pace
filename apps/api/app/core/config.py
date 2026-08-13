@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     )
     TIMESCALE_ENABLED: bool = Field(default=False)
 
+    # Environment Stage
+    ENVIRONMENT: str = Field(default="development", description="Environment stage: development, testing, or production")
+
     # Security Settings
     SECRET_KEY: str = Field(default="pace-development-secret-key-change-in-production-32bytes", min_length=16)
     JWT_ALGORITHM: str = "HS256"
@@ -45,4 +48,21 @@ class Settings(BaseSettings):
     DATA_RETENTION_DAYS: int = 90
     WORKER_ENABLED: bool = True
 
+    def validate_production_rules(self):
+        if self.ENVIRONMENT.lower() == "production":
+            sec_key = self.SECRET_KEY.lower()
+            if "change-in-production" in sec_key or "development" in sec_key:
+                raise ValueError("Production deployment requires a unique, secure SECRET_KEY.")
+
+            salt = self.INGESTION_KEY_SALT.lower()
+            if "pace-ingestion-salt" in salt:
+                raise ValueError("Production deployment requires a unique INGESTION_KEY_SALT.")
+
+            if self.DEMO_MODE:
+                raise ValueError("DEMO_MODE must be set to false in production.")
+
+            if "*" in self.CORS_ORIGINS:
+                raise ValueError("CORS_ORIGINS cannot contain wildcard '*' in production.")
+
 settings = Settings()
+settings.validate_production_rules()
