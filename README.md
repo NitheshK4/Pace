@@ -417,11 +417,13 @@ pricing_rates                           (versioned: provider+model+effective_fro
 
 ## 🤝 Contributing
 
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for complete prerequisites and guidelines.
+
+Run the local verification suite:
 ```bash
-git checkout -b feature/your-feature
-git commit -m "Add your feature"
-git push origin feature/your-feature
-# Open a PR
+make verify
+# or
+./scripts/verify.sh
 ```
 
 ---
