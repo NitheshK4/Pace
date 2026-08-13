@@ -158,6 +158,7 @@ class UsageEventResponse(BaseModel):
 class EventsListResponse(BaseModel):
     events: List[UsageEventResponse]
     next_cursor: Optional[str] = None
+    has_more: bool = False
     total: int = 0
 
 # --- Pricing Schemas ---

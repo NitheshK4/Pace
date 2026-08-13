@@ -270,6 +270,23 @@ async def get_analytics_summary(
         "top_provider_tokens": top_p_row.total_tokens if top_p_row else 0
     }
 
+import base64
+
+def encode_cursor(dt: datetime, event_id: str) -> str:
+    raw = f"{dt.isoformat()}|{event_id}"
+    return base64.urlsafe_b64encode(raw.encode("utf-8")).decode("utf-8")
+
+def decode_cursor(cursor_str: str) -> tuple[Optional[datetime], str]:
+    try:
+        decoded = base64.urlsafe_b64decode(cursor_str.encode("utf-8")).decode("utf-8")
+        parts = decoded.split("|", 1)
+        if len(parts) == 2:
+            dt = datetime.fromisoformat(parts[0])
+            return dt, parts[1]
+    except Exception:
+        pass
+    return None, cursor_str
+
 @router.get("/events", response_model=EventsListResponse)
 async def list_events(
     project_id: str = Query(...),
@@ -304,8 +321,22 @@ async def list_events(
         conditions.append(UsageEvent.latency_ms >= min_latency_ms)
     if errors_only:
         conditions.append(UsageEvent.status_code >= 400)
+
+    total_stmt = select(func.count(UsageEvent.id)).where(and_(*conditions))
+    t_res = await db.execute(total_stmt)
+    total_count = t_res.scalar() or 0
+
     if cursor:
-        conditions.append(UsageEvent.id < cursor)
+        c_time, c_id = decode_cursor(cursor)
+        if c_time is not None:
+            conditions.append(
+                or_(
+                    UsageEvent.time < c_time,
+                    and_(UsageEvent.time == c_time, UsageEvent.id < c_id)
+                )
+            )
+        else:
+            conditions.append(UsageEvent.id < c_id)
 
     stmt = (
         select(UsageEvent)
@@ -318,13 +349,12 @@ async def list_events(
     events = res.scalars().all()
 
     next_cursor = None
+    has_more = False
     if len(events) > limit:
-        next_cursor = events[limit - 1].id
+        has_more = True
+        last_ev = events[limit - 1]
+        next_cursor = encode_cursor(last_ev.time, last_ev.id)
         events = events[:limit]
-
-    total_stmt = select(func.count(UsageEvent.id)).where(and_(*conditions))
-    t_res = await db.execute(total_stmt)
-    total_count = t_res.scalar() or 0
 
     if response:
         response.headers["X-Total-Count"] = str(total_count)
@@ -332,6 +362,7 @@ async def list_events(
     return EventsListResponse(
         events=[UsageEventResponse.model_validate(e) for e in events],
         next_cursor=next_cursor,
+        has_more=has_more,
         total=total_count
     )
 
