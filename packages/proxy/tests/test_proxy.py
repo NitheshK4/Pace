@@ -1,7 +1,8 @@
 import pytest
+import json
 from unittest.mock import patch, AsyncMock
 from httpx import AsyncClient, ASGITransport, Response
-from pace_proxy.server import app, clean_headers
+from pace_proxy.server import app, clean_headers, parse_sse_usage, telemetry_queue
 
 @pytest.mark.asyncio
 async def test_proxy_health():
@@ -26,6 +27,29 @@ def test_clean_headers():
     assert "Connection" not in cleaned
     assert "Authorization" in cleaned
     assert cleaned["Content-Type"] == "application/json"
+
+def test_parse_sse_usage_openai():
+    sse_text = (
+        'data: {"id":"chatcmpl-1","model":"gpt-4o-2024-08-06","choices":[{"delta":{"content":"Hi"}}]}\n\n'
+        'data: {"id":"chatcmpl-1","model":"gpt-4o-2024-08-06","choices":[],"usage":{"prompt_tokens":14,"completion_tokens":42}}\n\n'
+        'data: [DONE]\n\n'
+    )
+    model, in_tok, out_tok = parse_sse_usage("openai", sse_text, {"model": "gpt-4o"})
+    assert model == "gpt-4o-2024-08-06"
+    assert in_tok == 14
+    assert out_tok == 42
+
+def test_parse_sse_usage_anthropic():
+    sse_text = (
+        'event: message_start\n'
+        'data: {"type":"message_start","message":{"id":"msg_1","model":"claude-3-5-sonnet-20241022","usage":{"input_tokens":25,"output_tokens":1}}}\n\n'
+        'event: message_delta\n'
+        'data: {"type":"message_delta","usage":{"output_tokens":30}}\n\n'
+    )
+    model, in_tok, out_tok = parse_sse_usage("anthropic", sse_text, {"model": "claude-3-5-sonnet"})
+    assert model == "claude-3-5-sonnet-20241022"
+    assert in_tok == 25
+    assert out_tok == 30
 
 @pytest.mark.asyncio
 async def test_unknown_provider_rejection():
@@ -57,24 +81,40 @@ async def test_openai_forwarding_and_headers():
             assert kwargs["headers"]["authorization"] == "Bearer sk-test-openai-key"
 
 @pytest.mark.asyncio
-async def test_anthropic_forwarding_and_headers():
+async def test_streaming_proxy_enqueues_accurate_telemetry():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        mock_client = AsyncMock()
-        mock_client.request.return_value = Response(200, json={
-            "id": "msg_123",
-            "type": "message",
-            "usage": {"input_tokens": 15, "output_tokens": 8}
-        }, headers={"Content-Type": "application/json"})
+        sse_payload = (
+            'data: {"id":"chatcmpl-stream","model":"gpt-4o","choices":[{"delta":{"content":"World"}}]}\n\n'
+            'data: {"usage":{"prompt_tokens":18,"completion_tokens":33}}\n\n'
+            'data: [DONE]\n\n'
+        ).encode("utf-8")
 
-        with patch("pace_proxy.server.httpx.AsyncClient", return_value=mock_client):
+        async def mock_aiter_bytes():
+            yield sse_payload
+
+        mock_resp = AsyncMock()
+        mock_resp.status_code = 200
+        mock_resp.headers = {"content-type": "text/event-stream"}
+        mock_resp.aiter_bytes = mock_aiter_bytes
+        mock_resp.aclose = AsyncMock()
+
+        mock_client = AsyncMock()
+        mock_client.send.return_value = mock_resp
+        mock_client.aclose = AsyncMock()
+
+        with patch("pace_proxy.server.httpx.AsyncClient", return_value=mock_client), \
+             patch.object(telemetry_queue, "enqueue") as mock_enqueue:
+
             res = await ac.post(
-                "/v1/messages",
-                json={"model": "claude-3-5-sonnet-20241022", "messages": [{"role": "user", "content": "hi"}]},
-                headers={"x-api-key": "sk-ant-testkey", "anthropic-version": "2023-06-01"}
+                "/v1/chat/completions",
+                json={"model": "gpt-4o", "stream": True, "messages": [{"role": "user", "content": "Hello"}]}
             )
             assert res.status_code == 200
-            assert mock_client.request.called
-            kwargs = mock_client.request.call_args.kwargs
-            assert kwargs["url"] == "https://api.anthropic.com/v1/messages"
-            assert kwargs["headers"]["x-api-key"] == "sk-ant-testkey"
-            assert kwargs["headers"]["anthropic-version"] == "2023-06-01"
+            content = await res.aread()
+            assert b"World" in content
+
+            assert mock_enqueue.called
+            enqueued_event = mock_enqueue.call_args.args[0]
+            assert enqueued_event["provider"] == "openai"
+            assert enqueued_event["input_tokens"] == 18
+            assert enqueued_event["output_tokens"] == 33

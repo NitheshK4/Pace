@@ -5,7 +5,7 @@ import uuid
 import logging
 import uvicorn
 import httpx
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.responses import StreamingResponse
 from pace.queue import ResilientTelemetryQueue
@@ -38,7 +38,7 @@ async def proxy_health():
 
 def clean_headers(incoming_headers: Dict[str, str]) -> Dict[str, str]:
     headers = {}
-    drop_keys = {"host", "content-length", "transfer-encoding", "connection"}
+    drop_keys = {"host", "content-length", "transfer-encoding", "connection", "x-pace-provider"}
     for k, v in incoming_headers.items():
         if k.lower() not in drop_keys:
             headers[k] = v
@@ -77,6 +77,78 @@ def resolve_provider_and_target_url(provider_path: str, headers_dict: Dict[str, 
         detail=f"Unknown or unsupported LLM provider for path '/{clean_path}'. Specify /v1/openai/..., /v1/anthropic/..., or X-Pace-Provider header."
     )
 
+def parse_sse_usage(provider: str, accumulated_text: str, request_body_json: Dict[str, Any]) -> Tuple[str, int, int]:
+    """Parses SSE stream text to extract model name and usage token counts."""
+    model = request_body_json.get("model", "unknown-model")
+    input_tokens = 0
+    output_tokens = 0
+    completion_chunks_count = 0
+
+    lines = accumulated_text.split("\n")
+    for line in lines:
+        line = line.strip()
+        if not line.startswith("data:"):
+            continue
+        
+        data_str = line[5:].strip()
+        if data_str == "[DONE]":
+            continue
+
+        try:
+            payload = json.loads(data_str)
+            if isinstance(payload, dict):
+                if "model" in payload and payload["model"]:
+                    model = payload["model"]
+
+                # OpenAI usage
+                usage = payload.get("usage")
+                if isinstance(usage, dict):
+                    if "prompt_tokens" in usage and usage["prompt_tokens"]:
+                        input_tokens = usage["prompt_tokens"]
+                    if "completion_tokens" in usage and usage["completion_tokens"]:
+                        output_tokens = usage["completion_tokens"]
+                    if "input_tokens" in usage and usage["input_tokens"]:
+                        input_tokens = usage["input_tokens"]
+                    if "output_tokens" in usage and usage["output_tokens"]:
+                        output_tokens = usage["output_tokens"]
+
+                # Anthropic usage
+                if payload.get("type") == "message_start":
+                    msg = payload.get("message", {})
+                    if isinstance(msg, dict):
+                        if "model" in msg and msg["model"]:
+                            model = msg["model"]
+                        msg_usage = msg.get("usage", {})
+                        if isinstance(msg_usage, dict):
+                            if "input_tokens" in msg_usage:
+                                input_tokens = msg_usage["input_tokens"]
+                            if "output_tokens" in msg_usage:
+                                output_tokens = msg_usage["output_tokens"]
+
+                if payload.get("type") == "message_delta":
+                    delta_usage = payload.get("usage", {})
+                    if isinstance(delta_usage, dict):
+                        if "output_tokens" in delta_usage:
+                            output_tokens = delta_usage["output_tokens"]
+
+                choices = payload.get("choices", [])
+                if choices and isinstance(choices, list):
+                    for choice in choices:
+                        if isinstance(choice, dict) and "delta" in choice:
+                            completion_chunks_count += 1
+        except Exception:
+            pass
+
+    if input_tokens == 0:
+        req_messages = request_body_json.get("messages", [])
+        raw_prompt_len = sum(len(str(m.get("content", ""))) for m in req_messages if isinstance(m, dict))
+        input_tokens = max(1, raw_prompt_len // 4)
+
+    if output_tokens == 0:
+        output_tokens = max(1, completion_chunks_count)
+
+    return model, input_tokens, output_tokens
+
 @app.api_route("/{provider_path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 async def proxy_forward(request: Request, provider_path: str):
     start_time = time.time()
@@ -100,7 +172,7 @@ async def proxy_forward(request: Request, provider_path: str):
         client = httpx.AsyncClient(timeout=60.0)
         
         if stream:
-            # Handle non-buffered streaming proxying
+            # Non-buffered streaming proxying with accurate telemetry in finally
             req = client.build_request(
                 method=request.method,
                 url=target_url,
@@ -108,25 +180,31 @@ async def proxy_forward(request: Request, provider_path: str):
                 content=body_bytes
             )
             response = await client.send(req, stream=True)
-            latency_ms = int((time.time() - start_time) * 1000)
-
-            # Emit async telemetry to Pace
-            telemetry_queue.enqueue({
-                "event_id": str(uuid.uuid4()),
-                "provider": provider,
-                "model": model_name,
-                "endpoint": provider_path,
-                "input_tokens": 100,  # Estimated for stream start
-                "output_tokens": 50,
-                "latency_ms": latency_ms,
-                "status_code": response.status_code
-            })
+            buffer_chunks = []
 
             async def stream_body():
                 try:
                     async for chunk in response.aiter_bytes():
+                        try:
+                            buffer_chunks.append(chunk.decode("utf-8", errors="ignore"))
+                        except Exception:
+                            pass
                         yield chunk
                 finally:
+                    latency_ms = int((time.time() - start_time) * 1000)
+                    full_text = "".join(buffer_chunks)
+                    actual_model, in_tok, out_tok = parse_sse_usage(provider, full_text, body_json)
+
+                    telemetry_queue.enqueue({
+                        "event_id": str(uuid.uuid4()),
+                        "provider": provider,
+                        "model": actual_model,
+                        "endpoint": endpoint_path,
+                        "input_tokens": in_tok,
+                        "output_tokens": out_tok,
+                        "latency_ms": latency_ms,
+                        "status_code": response.status_code
+                    })
                     await response.aclose()
                     await client.aclose()
 
@@ -147,8 +225,12 @@ async def proxy_forward(request: Request, provider_path: str):
             # Parse usage if present in response
             input_tokens = 0
             output_tokens = 0
+            actual_model = model_name
+
             try:
                 res_data = resp.json()
+                if "model" in res_data and res_data["model"]:
+                    actual_model = res_data["model"]
                 usage = res_data.get("usage", {})
                 input_tokens = usage.get("prompt_tokens") or usage.get("input_tokens") or 0
                 output_tokens = usage.get("completion_tokens") or usage.get("output_tokens") or 0
@@ -159,8 +241,8 @@ async def proxy_forward(request: Request, provider_path: str):
             telemetry_queue.enqueue({
                 "event_id": str(uuid.uuid4()),
                 "provider": provider,
-                "model": model_name,
-                "endpoint": provider_path,
+                "model": actual_model,
+                "endpoint": endpoint_path,
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
                 "latency_ms": latency_ms,
@@ -181,7 +263,7 @@ async def proxy_forward(request: Request, provider_path: str):
             "event_id": str(uuid.uuid4()),
             "provider": provider,
             "model": model_name,
-            "endpoint": provider_path,
+            "endpoint": endpoint_path,
             "input_tokens": 0,
             "output_tokens": 0,
             "latency_ms": latency_ms,
