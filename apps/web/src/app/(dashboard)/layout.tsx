@@ -5,9 +5,10 @@ import { Sidebar } from '@/components/Sidebar';
 import { Navbar } from '@/components/Navbar';
 import { CreateProjectModal } from '@/components/CreateProjectModal';
 import { ApiKeyModal } from '@/components/ApiKeyModal';
+import { ProjectProvider, useProject } from '@/context/ProjectContext';
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+function DashboardContent({ children }: { children: React.ReactNode }) {
+  const { selectedProject, setSelectedProject, refreshProjects } = useProject();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newApiKeyData, setNewApiKeyData] = useState<any>(null);
 
@@ -19,7 +20,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const handleProjectCreated = (project: any, initialKey: any) => {
     setIsCreateOpen(false);
-    setSelectedProjectId(project.id);
+    void refreshProjects();
+    if (project && project.id) {
+      setSelectedProject(project);
+    }
     if (initialKey && initialKey.raw_key) {
       setNewApiKeyData(initialKey);
     }
@@ -30,16 +34,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Navbar
-          selectedProjectId={selectedProjectId}
-          onSelectProject={(id) => setSelectedProjectId(id)}
+          selectedProjectId={selectedProject?.id || null}
+          onSelectProject={(id) => {}}
           onOpenCreateProject={() => setIsCreateOpen(true)}
         />
-        <main className="flex-1 p-8 overflow-y-auto">
-          {/* Inject selectedProjectId to child pages via React cloneElement or context */}
-          {typeof children === 'object' && children !== null
-            ? (children as any)
-            : children}
-        </main>
+        <main className="flex-1 p-8 overflow-y-auto">{children}</main>
       </div>
 
       <CreateProjectModal
@@ -53,5 +52,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onClose={() => setNewApiKeyData(null)}
       />
     </div>
+  );
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ProjectProvider>
+      <DashboardContent>{children}</DashboardContent>
+    </ProjectProvider>
   );
 }

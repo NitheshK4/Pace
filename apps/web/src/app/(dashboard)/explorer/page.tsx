@@ -5,8 +5,10 @@ import { apiFetch } from '@/lib/api';
 import { formatINR } from '@/lib/currency';
 import { Search, Download, Filter, X, ChevronRight, CheckCircle, AlertCircle, RefreshCw, Terminal, Layers } from 'lucide-react';
 
+import { useProject } from '@/context/ProjectContext';
+
 export default function ExplorerPage() {
-  const [projectId, setProjectId] = useState<string | null>(null);
+  const { selectedProject, isLoading: projectsLoading } = useProject();
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [providerFilter, setProviderFilter] = useState('');
@@ -16,32 +18,23 @@ export default function ExplorerPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchFirstProject();
-  }, []);
-
-  useEffect(() => {
-    if (projectId) {
-      loadEvents(projectId);
+    if (selectedProject) {
+      loadEvents(selectedProject.id);
+    } else if (!projectsLoading) {
+      setLoading(false);
     }
-  }, [projectId, providerFilter, modelFilter, errorsOnly, minLatencyMs]);
-
-  const fetchFirstProject = async () => {
-    try {
-      const projects = await apiFetch<any[]>('/projects');
-      if (projects.length > 0) setProjectId(projects[0].id);
-    } catch {}
-  };
+  }, [selectedProject, providerFilter, modelFilter, errorsOnly, minLatencyMs, projectsLoading]);
 
   const loadEvents = async (pid: string) => {
     setLoading(true);
     try {
       let query = `/analytics/events?project_id=${pid}&limit=50`;
-      if (providerFilter) query += `&provider=${providerFilter}`;
-      if (modelFilter) query += `&model=${modelFilter}`;
+      if (providerFilter) query += `&provider=${encodeURIComponent(providerFilter)}`;
+      if (modelFilter) query += `&model=${encodeURIComponent(modelFilter)}`;
       if (errorsOnly) query += `&errors_only=true`;
-      if (minLatencyMs) query += `&min_latency_ms=${minLatencyMs}`;
+      if (minLatencyMs) query += `&min_latency_ms=${encodeURIComponent(minLatencyMs)}`;
       const data = await apiFetch<{ events: any[] }>(query);
-      setEvents(data.events);
+      setEvents(data.events || []);
     } catch {} finally {
       setLoading(false);
     }
@@ -55,11 +48,12 @@ export default function ExplorerPage() {
   const [exporting, setExporting] = useState(false);
 
   const handleExportCSV = async () => {
-    if (!projectId) return;
+    if (!selectedProject) return;
     setExporting(true);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('pace_token') : null;
-      const res = await fetch(`http://localhost:8000/v1/exports/csv?project_id=${projectId}`, {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/v1';
+      const res = await fetch(`${baseUrl}/exports/csv?project_id=${selectedProject.id}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) throw new Error('Failed to export CSV');
@@ -67,13 +61,14 @@ export default function ExplorerPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `pace_telemetry_${projectId}.csv`;
+      a.download = `pace_telemetry_${selectedProject.id}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch {
-      window.open(`http://localhost:8000/v1/exports/csv?project_id=${projectId}`, '_blank');
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/v1';
+      window.open(`${baseUrl}/exports/csv?project_id=${selectedProject.id}`, '_blank');
     } finally {
       setExporting(false);
     }
@@ -91,7 +86,7 @@ export default function ExplorerPage() {
         </div>
         <button
           onClick={handleExportCSV}
-          disabled={exporting || !projectId}
+          disabled={exporting || !selectedProject}
           className="bg-pace-surface border border-pace-border hover:border-pace-lime text-white text-xs font-mono font-bold px-4 py-2.5 rounded-xl flex items-center space-x-2 transition shadow-md disabled:opacity-50"
         >
           {exporting ? (

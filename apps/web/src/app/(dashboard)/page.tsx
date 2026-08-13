@@ -49,41 +49,42 @@ interface EventItem {
   status_code: number;
 }
 
+import { useProject } from '@/context/ProjectContext';
+
 export default function OverviewPage() {
-  const [projectId, setProjectId] = useState<string | null>(null);
+  const { selectedProject, isLoading: projectsLoading } = useProject();
   const [overview, setOverview] = useState<OverviewData | null>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
+  const [timeframe, setTimeframe] = useState('24h');
+  const [providerFilter, setProviderFilter] = useState('');
+  const [modelFilter, setModelFilter] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchFirstProject();
-  }, []);
-
-  useEffect(() => {
-    if (projectId) {
-      loadData(projectId);
-    }
-  }, [projectId]);
-
-  const fetchFirstProject = async () => {
-    try {
-      const projects = await apiFetch<any[]>('/projects');
-      if (projects.length > 0) {
-        setProjectId(projects[0].id);
-      } else {
-        setLoading(false);
-      }
-    } catch {
+    if (selectedProject) {
+      loadData(selectedProject.id);
+    } else if (!projectsLoading) {
       setLoading(false);
     }
-  };
+  }, [selectedProject, timeframe, providerFilter, modelFilter, projectsLoading]);
 
   const loadData = async (pid: string) => {
     setLoading(true);
     try {
+      let ovUrl = `/analytics/overview?project_id=${pid}&timeframe=${timeframe}`;
+      let evUrl = `/analytics/events?project_id=${pid}&limit=20`;
+      if (providerFilter) {
+        ovUrl += `&provider=${encodeURIComponent(providerFilter)}`;
+        evUrl += `&provider=${encodeURIComponent(providerFilter)}`;
+      }
+      if (modelFilter) {
+        ovUrl += `&model=${encodeURIComponent(modelFilter)}`;
+        evUrl += `&model=${encodeURIComponent(modelFilter)}`;
+      }
+
       const [ovData, evData] = await Promise.all([
-        apiFetch<OverviewData>(`/analytics/overview?project_id=${pid}`),
-        apiFetch<{ events: EventItem[] }>(`/analytics/events?project_id=${pid}&limit=20`),
+        apiFetch<OverviewData>(ovUrl),
+        apiFetch<{ events: EventItem[] }>(evUrl),
       ]);
       setOverview(ovData);
       setEvents(evData.events);
@@ -123,7 +124,7 @@ export default function OverviewPage() {
     );
   }
 
-  if (!projectId || !overview) {
+  if (!selectedProject || !overview) {
     return (
       <div className="max-w-2xl mx-auto mt-12 bg-pace-surface border border-pace-border rounded-2xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-pace-lime via-pace-lavender to-pace-cyan" />
@@ -178,7 +179,7 @@ with PaceClient(api_key="YOUR_KEY") as pace:
 
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => loadData(projectId)}
+            onClick={() => selectedProject && loadData(selectedProject.id)}
             className="bg-pace-surface hover:bg-pace-surfaceHover border border-pace-border text-white text-xs font-mono font-bold px-3.5 py-2 rounded-xl flex items-center space-x-2 transition shadow-sm"
           >
             <RefreshCw className="w-3.5 h-3.5 text-pace-lime" />

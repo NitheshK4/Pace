@@ -2,14 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/api';
-import { Plus, FolderGit2, LogOut, Activity, ChevronDown, User, Check, RefreshCw } from 'lucide-react';
-
-interface Project {
-  id: string;
-  name: string;
-  slug: string;
-  role: string;
-}
+import { useProject } from '@/context/ProjectContext';
+import { Plus, FolderGit2, LogOut, ChevronDown, RefreshCw } from 'lucide-react';
 
 interface NavbarProps {
   selectedProjectId: string | null;
@@ -18,26 +12,13 @@ interface NavbarProps {
 }
 
 export function Navbar({ selectedProjectId, onSelectProject, onOpenCreateProject }: NavbarProps) {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const { projects, selectedProject, setSelectedProject, refreshProjects } = useProject();
   const [userEmail, setUserEmail] = useState<string>('');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    fetchProjects();
     fetchUser();
   }, []);
-
-  const fetchProjects = async () => {
-    try {
-      const data = await apiFetch<Project[]>('/projects');
-      setProjects(data);
-      if (data.length > 0 && !selectedProjectId) {
-        onSelectProject(data[0].id);
-      }
-    } catch {
-      // fallback
-    }
-  };
 
   const fetchUser = async () => {
     try {
@@ -50,16 +31,15 @@ export function Navbar({ selectedProjectId, onSelectProject, onOpenCreateProject
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await fetchProjects();
+    await refreshProjects();
     setTimeout(() => setIsRefreshing(false), 500);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('pace_token');
+    localStorage.removeItem('pace_active_project_id');
     window.location.href = '/login';
   };
-
-  const currentProject = projects.find(p => p.id === selectedProjectId);
 
   return (
     <header className="h-16 bg-pace-surface border-b border-pace-border px-6 flex items-center justify-between sticky top-0 z-30">
@@ -72,14 +52,17 @@ export function Navbar({ selectedProjectId, onSelectProject, onOpenCreateProject
 
         <div className="relative flex items-center space-x-2">
           <select
-            value={selectedProjectId || ''}
-            onChange={(e) => onSelectProject(e.target.value)}
+            value={selectedProject?.id || ''}
+            onChange={(e) => {
+              const p = projects.find(proj => proj.id === e.target.value);
+              if (p) setSelectedProject(p);
+            }}
             className="bg-pace-bg border border-pace-border text-white text-xs font-mono font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:border-pace-lime appearance-none pr-8 cursor-pointer shadow-inner"
           >
             {projects.length === 0 && <option value="">No projects found</option>}
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name} ({p.role.toUpperCase()})
+                {p.name}
               </option>
             ))}
           </select>
@@ -97,14 +80,12 @@ export function Navbar({ selectedProjectId, onSelectProject, onOpenCreateProject
 
       {/* Center / Right Telemetry Status & User Profile */}
       <div className="flex items-center space-x-5 text-xs font-mono">
-        {/* System Health Pulse Indicator */}
         <div className="hidden sm:flex items-center space-x-2 bg-pace-bg border border-pace-border px-3 py-1.5 rounded-lg text-pace-muted">
           <span className="w-2 h-2 rounded-full bg-pace-emerald animate-pulse" />
           <span>SYSTEM HEALTH:</span>
-          <span className="text-pace-emerald font-bold">100% OPERATIONAL</span>
+          <span className="text-pace-emerald font-bold">OPERATIONAL</span>
         </div>
 
-        {/* Manual Refresh Button */}
         <button
           onClick={handleRefresh}
           className="text-pace-muted hover:text-white transition p-1.5 rounded-lg hover:bg-pace-bg border border-transparent hover:border-pace-border"
@@ -113,7 +94,6 @@ export function Navbar({ selectedProjectId, onSelectProject, onOpenCreateProject
           <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-pace-lime' : ''}`} />
         </button>
 
-        {/* User Profile Tag */}
         <div className="flex items-center space-x-3 pl-2 border-l border-pace-border">
           <div className="flex items-center space-x-2">
             <div className="w-7 h-7 rounded-full bg-pace-bg border border-pace-lavender/40 text-pace-lavender font-mono font-bold text-xs flex items-center justify-center">

@@ -18,8 +18,10 @@ interface LiveEvent {
   status_code: number;
 }
 
+import { useProject } from '@/context/ProjectContext';
+
 export default function LiveTailPage() {
-  const [projectId, setProjectId] = useState<string | null>(null);
+  const { selectedProject } = useProject();
   const [events, setEvents] = useState<LiveEvent[]>([]);
   const [statusFilter, setStatusFilter] = useState<'all' | '2xx' | '429' | '5xx'>('all');
   const [isPaused, setIsPaused] = useState(false);
@@ -27,15 +29,11 @@ export default function LiveTailPage() {
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
-    fetchFirstProject();
-  }, []);
-
-  useEffect(() => {
-    if (!projectId || isPaused) return;
+    if (!selectedProject || isPaused) return;
 
     const token = localStorage.getItem('pace_token') || '';
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/v1';
-    const url = `${baseUrl}/analytics/live-tail?project_id=${projectId}`;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/v1';
+    const url = `${baseUrl}/analytics/live-tail?project_id=${selectedProject.id}`;
 
     const es = new EventSource(url, { withCredentials: true });
     eventSourceRef.current = es;
@@ -59,14 +57,7 @@ export default function LiveTailPage() {
       es.close();
       setIsConnected(false);
     };
-  }, [projectId, isPaused]);
-
-  const fetchFirstProject = async () => {
-    try {
-      const projects = await apiFetch<any[]>('/projects');
-      if (projects.length > 0) setProjectId(projects[0].id);
-    } catch {}
-  };
+  }, [selectedProject, isPaused]);
 
   return (
     <div className="space-y-6 animate-fade-in">

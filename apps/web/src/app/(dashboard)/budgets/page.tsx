@@ -28,8 +28,10 @@ interface AlertItem {
   delivered_at: string;
 }
 
+import { useProject } from '@/context/ProjectContext';
+
 export default function BudgetsPage() {
-  const [projectId, setProjectId] = useState<string | null>(null);
+  const { selectedProject, isLoading: projectsLoading } = useProject();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,21 +44,12 @@ export default function BudgetsPage() {
   const [webhookUrl, setWebhookUrl] = useState('');
 
   useEffect(() => {
-    fetchFirstProject();
-  }, []);
-
-  useEffect(() => {
-    if (projectId) {
-      loadBudgetsAndAlerts(projectId);
+    if (selectedProject) {
+      loadBudgetsAndAlerts(selectedProject.id);
+    } else if (!projectsLoading) {
+      setLoading(false);
     }
-  }, [projectId]);
-
-  const fetchFirstProject = async () => {
-    try {
-      const projects = await apiFetch<any[]>('/projects');
-      if (projects.length > 0) setProjectId(projects[0].id);
-    } catch {}
-  };
+  }, [selectedProject, projectsLoading]);
 
   const loadBudgetsAndAlerts = async (pid: string) => {
     setLoading(true);
@@ -74,7 +67,7 @@ export default function BudgetsPage() {
 
   const handleCreateBudget = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!projectId) return;
+    if (!selectedProject) return;
 
     try {
       const dests: Array<{ type: string; url?: string }> = [{ type: 'console' }];
@@ -85,7 +78,7 @@ export default function BudgetsPage() {
       await apiFetch('/budgets', {
         method: 'POST',
         body: JSON.stringify({
-          project_id: projectId,
+          project_id: selectedProject.id,
           name,
           amount_usd: parseFloat(amountUsd),
           period,
@@ -96,7 +89,7 @@ export default function BudgetsPage() {
       });
 
       setIsAddOpen(false);
-      loadBudgetsAndAlerts(projectId);
+      loadBudgetsAndAlerts(selectedProject.id);
     } catch (err: any) {
       alert(err.message || 'Failed to create budget');
     }
