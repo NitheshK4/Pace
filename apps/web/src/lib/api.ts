@@ -1,3 +1,5 @@
+import { Project, ProjectSummary, TimeseriesPoint, BreakdownItem, TelemetryEvent, EventsListResponse, Budget } from './types';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/v1';
 
 export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -17,6 +19,12 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
     headers,
   });
 
+  if (response.status === 401) {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('pace_token');
+    }
+  }
+
   if (!response.ok) {
     let errorMsg = 'An unexpected error occurred';
     try {
@@ -30,3 +38,34 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
 
   return response.json();
 }
+
+export const paceApi = {
+  getProjects: () => apiFetch<Project[]>('/projects'),
+
+  getProjectSummary: (projectId: string, timeframe: string = '24h') =>
+    apiFetch<ProjectSummary>(`/analytics/summary?project_id=${projectId}&timeframe=${timeframe}`),
+
+  getTimeseries: (projectId: string, timeframe: string = '24h', interval: string = '1h', provider?: string, model?: string) => {
+    let url = `/analytics/timeseries?project_id=${projectId}&timeframe=${timeframe}&interval=${interval}`;
+    if (provider) url += `&provider=${encodeURIComponent(provider)}`;
+    if (model) url += `&model=${encodeURIComponent(model)}`;
+    return apiFetch<TimeseriesPoint[]>(url);
+  },
+
+  getBreakdown: (projectId: string, group_by: string = 'model', timeframe: string = '24h', provider?: string, model?: string) => {
+    let url = `/analytics/breakdown?project_id=${projectId}&group_by=${group_by}&timeframe=${timeframe}`;
+    if (provider) url += `&provider=${encodeURIComponent(provider)}`;
+    if (model) url += `&model=${encodeURIComponent(model)}`;
+    return apiFetch<BreakdownItem[]>(url);
+  },
+
+  getEvents: (projectId: string, limit: number = 50, cursor?: string, provider?: string, model?: string) => {
+    let url = `/analytics/events?project_id=${projectId}&limit=${limit}`;
+    if (cursor) url += `&cursor=${encodeURIComponent(cursor)}`;
+    if (provider) url += `&provider=${encodeURIComponent(provider)}`;
+    if (model) url += `&model=${encodeURIComponent(model)}`;
+    return apiFetch<EventsListResponse>(url);
+  },
+
+  getBudgets: (projectId: string) => apiFetch<Budget[]>(`/budgets?project_id=${projectId}`),
+};
