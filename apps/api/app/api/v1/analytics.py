@@ -112,6 +112,8 @@ async def get_timeseries(
     project_id: str = Query(...),
     start_time: Optional[datetime] = Query(None),
     end_time: Optional[datetime] = Query(None),
+    provider: Optional[str] = Query(None),
+    model: Optional[str] = Query(None),
     granularity: str = Query("day", pattern="^(hour|day)$"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -119,8 +121,24 @@ async def get_timeseries(
     await check_project_access(project_id, current_user.id, db)
     start, end = parse_time_range(start_time, end_time)
 
-    # Simple group-by time bucket
-    date_func = func.date_trunc(granularity, UsageEvent.time)
+    conditions = [
+        UsageEvent.project_id == project_id,
+        UsageEvent.time >= start,
+        UsageEvent.time <= end
+    ]
+    if provider:
+        conditions.append(UsageEvent.provider == provider.lower())
+    if model:
+        conditions.append(UsageEvent.model == model)
+
+    # Dialect-aware time bucket
+    dialect = db.bind.dialect.name if db.bind else ""
+    if dialect == "postgresql":
+        date_func = func.date_trunc(granularity, UsageEvent.time)
+    else:
+        fmt = "%Y-%m-%d" if granularity == "day" else "%Y-%m-%d %H:00:00"
+        date_func = func.strftime(fmt, UsageEvent.time)
+
     stmt = (
         select(
             date_func.label("bucket"),
@@ -129,11 +147,7 @@ async def get_timeseries(
             func.sum(UsageEvent.input_tokens + UsageEvent.output_tokens).label("tokens"),
             func.sum(case((UsageEvent.status_code >= 400, 1), else_=0)).label("errors")
         )
-        .where(
-            UsageEvent.project_id == project_id,
-            UsageEvent.time >= start,
-            UsageEvent.time <= end
-        )
+        .where(and_(*conditions))
         .group_by("bucket")
         .order_by("bucket")
     )
@@ -143,7 +157,7 @@ async def get_timeseries(
 
     points = []
     for r in rows:
-        ts_str = r.bucket.isoformat() if r.bucket else ""
+        ts_str = r.bucket.isoformat() if hasattr(r.bucket, "isoformat") else str(r.bucket or "")
         points.append(TimeseriesPoint(
             timestamp=ts_str,
             spend_usd=float(r.spend or 0.0),
@@ -159,11 +173,23 @@ async def get_breakdown(
     project_id: str = Query(...),
     start_time: Optional[datetime] = Query(None),
     end_time: Optional[datetime] = Query(None),
+    provider: Optional[str] = Query(None),
+    model: Optional[str] = Query(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     await check_project_access(project_id, current_user.id, db)
     start, end = parse_time_range(start_time, end_time)
+
+    conditions = [
+        UsageEvent.project_id == project_id,
+        UsageEvent.time >= start,
+        UsageEvent.time <= end
+    ]
+    if provider:
+        conditions.append(UsageEvent.provider == provider.lower())
+    if model:
+        conditions.append(UsageEvent.model == model)
 
     # By Provider
     p_stmt = (
@@ -173,7 +199,7 @@ async def get_breakdown(
             func.count(UsageEvent.id).label("requests"),
             func.sum(UsageEvent.input_tokens + UsageEvent.output_tokens).label("tokens")
         )
-        .where(UsageEvent.project_id == project_id, UsageEvent.time >= start, UsageEvent.time <= end)
+        .where(and_(*conditions))
         .group_by(UsageEvent.provider)
     )
     p_res = await db.execute(p_stmt)
@@ -187,7 +213,7 @@ async def get_breakdown(
             func.count(UsageEvent.id).label("requests"),
             func.sum(UsageEvent.input_tokens + UsageEvent.output_tokens).label("tokens")
         )
-        .where(UsageEvent.project_id == project_id, UsageEvent.time >= start, UsageEvent.time <= end)
+        .where(and_(*conditions))
         .group_by(UsageEvent.model)
     )
     m_res = await db.execute(m_stmt)
