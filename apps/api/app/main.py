@@ -27,10 +27,6 @@ worker = BackgroundWorker()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Ensure database tables exist for development/testing
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    
     # Seed default pricing rates and demo user if configured
     async with AsyncSessionLocal() as session:
         await seed_default_pricing_rates(session)

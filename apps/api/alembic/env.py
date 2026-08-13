@@ -12,10 +12,15 @@ from app.core.database import Base
 from app.models.models import *  # import all models
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.SYNC_DATABASE_URL)
+url = config.get_main_option("sqlalchemy.url")
+if url == "postgresql://pace:pace@localhost:5432/pace" and settings.SYNC_DATABASE_URL:
+    config.set_main_option("sqlalchemy.url", settings.SYNC_DATABASE_URL)
 
 if config.config_file_name:
-    fileConfig(config.config_file_name)
+    try:
+        fileConfig(config.config_file_name)
+    except Exception:
+        pass
 
 target_metadata = Base.metadata
 
@@ -32,8 +37,10 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 def run_migrations_online() -> None:
+    configuration = config.get_section(config.config_ini_section, {}) or {}
+    configuration["sqlalchemy.url"] = config.get_main_option("sqlalchemy.url")
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
