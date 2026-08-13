@@ -7,8 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  backend-tests:
-    name: Run FastAPI Unit & Integration Tests
+  python-suite:
+    name: API, Proxy, & Python SDK Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,20 +18,20 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
-          cache-dependency-path: apps/api/requirements.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r apps/api/requirements.txt
+          pip install -r packages/proxy/requirements.txt
           pip install -e ./packages/python-sdk -e ./apps/api
 
-      - name: Run Pytest
+      - name: Run Pytest suite
         run: |
-          PYTHONPATH=apps/api:packages/python-sdk:packages/proxy pytest apps/api/tests packages/python-sdk/tests packages/proxy/tests
+          PYTHONPATH=apps/api:packages/python-sdk:packages/proxy pytest apps/api/tests packages/proxy/tests packages/python-sdk/tests
 
-  typescript-sdk-tests:
-    name: Build & Test TypeScript SDK
+  typescript-and-web-suite:
+    name: TypeScript SDK & Web Frontend Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,17 +41,39 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: packages/typescript-sdk/package-lock.json
 
-      - name: Install dependencies & Test
+      - name: Test TypeScript SDK
         run: |
           cd packages/typescript-sdk
           npm ci
           npm run build
           npm test
 
-  docker-build:
-    name: Verify Docker Compose Build
+      - name: Build Web Frontend
+        run: |
+          cd apps/web
+          npm ci
+          npm run typecheck
+          npm run build
+
+  php-sdk-tests:
+    name: PHP SDK Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Run PHP SDK Tests
+        run: |
+          php packages/php-sdk/run_tests.php
+
+  docker-validation:
+    name: Docker Compose Validation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
