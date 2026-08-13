@@ -4,6 +4,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Header, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from app.core.database import get_db
 from app.core.security import hash_project_api_key
 from app.models.models import ProjectAPIKey, UsageEvent, PricingRate
@@ -121,7 +122,7 @@ async def ingest_events(
     rejected_count = 0
 
     for ev in events_list:
-        # Check idempotency
+        # Pre-check idempotency
         dup_stmt = select(UsageEvent).where(
             UsageEvent.project_id == api_key.project_id,
             UsageEvent.event_id == ev.event_id
@@ -162,8 +163,14 @@ async def ingest_events(
             request_id=ev.request_id,
             metadata_json=ev.metadata
         )
-        db.add(db_event)
-        accepted_count += 1
+        try:
+            async with db.begin_nested():
+                db.add(db_event)
+                await db.flush()
+            accepted_count += 1
+        except IntegrityError:
+            duplicate_count += 1
+            continue
 
     await db.commit()
     return IngestEventResponse(
