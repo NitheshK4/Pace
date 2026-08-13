@@ -36,6 +36,14 @@ class PaceClient {
      * @return array Ingestion response array or error details
      */
     public function record(array $data): array {
+        if (empty($data['provider']) || empty($data['model'])) {
+            return [
+                'success' => false,
+                'error'   => 'Missing required provider or model',
+                'status'  => 400
+            ];
+        }
+
         $eventId = $data['event_id'] ?? ('evt_' . bin2hex(random_bytes(10)));
         $metadata = array_merge($this->defaultMetadata, $data['metadata'] ?? []);
         $sanitizedMetadata = $this->sanitizeMetadata($metadata);
@@ -43,8 +51,8 @@ class PaceClient {
         $payload = [
             'event_id'             => $eventId,
             'time'                 => $data['time'] ?? gmdate('Y-m-d\TH:i:s\Z'),
-            'provider'             => strtolower($data['provider'] ?? 'openai'),
-            'model'                => $data['model'] ?? 'unknown',
+            'provider'             => strtolower($data['provider']),
+            'model'                => $data['model'],
             'endpoint'             => $data['endpoint'] ?? '/v1/chat/completions',
             'input_tokens'         => (int)($data['input_tokens'] ?? 0),
             'output_tokens'        => (int)($data['output_tokens'] ?? 0),
@@ -68,6 +76,9 @@ class PaceClient {
     public function recordBatch(array $events): array {
         $formattedEvents = [];
         foreach ($events as $data) {
+            if (empty($data['provider']) || empty($data['model'])) {
+                continue; // Skip invalid events in batch
+            }
             $eventId = $data['event_id'] ?? ('evt_' . bin2hex(random_bytes(10)));
             $metadata = array_merge($this->defaultMetadata, $data['metadata'] ?? []);
             $sanitizedMetadata = $this->sanitizeMetadata($metadata);
@@ -75,8 +86,8 @@ class PaceClient {
             $formattedEvents[] = [
                 'event_id'             => $eventId,
                 'time'                 => $data['time'] ?? gmdate('Y-m-d\TH:i:s\Z'),
-                'provider'             => strtolower($data['provider'] ?? 'openai'),
-                'model'                => $data['model'] ?? 'unknown',
+                'provider'             => strtolower($data['provider']),
+                'model'                => $data['model'],
                 'endpoint'             => $data['endpoint'] ?? '/v1/chat/completions',
                 'input_tokens'         => (int)($data['input_tokens'] ?? 0),
                 'output_tokens'        => (int)($data['output_tokens'] ?? 0),
@@ -86,6 +97,14 @@ class PaceClient {
                 'latency_ms'           => (int)($data['latency_ms'] ?? 0),
                 'status_code'          => (int)($data['status_code'] ?? 200),
                 'metadata'             => !empty($sanitizedMetadata) ? $sanitizedMetadata : null
+            ];
+        }
+
+        if (empty($formattedEvents)) {
+            return [
+                'success' => false,
+                'error'   => 'No valid events to submit',
+                'status'  => 400
             ];
         }
 
@@ -115,44 +134,53 @@ class PaceClient {
     }
 
     /**
-     * Helper to send JSON payload via cURL.
+     * Helper to send JSON payload via cURL with transient retry backoff.
      */
     private function sendHttpRequest(string $path, array $payload): array {
         $url = $this->endpoint . $path;
         $jsonPayload = json_encode($payload);
+        $maxAttempts = 3;
+        $backoffMs = 100000; // 100ms
 
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $jsonPayload,
-            CURLOPT_HTTPHEADER     => [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $this->apiKey,
-                'Content-Length: ' . strlen($jsonPayload)
-            ],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => $this->timeout,
-            CURLOPT_CONNECTTIMEOUT => 2
-        ]);
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_POST           => true,
+                CURLOPT_POSTFIELDS     => $jsonPayload,
+                CURLOPT_HTTPHEADER     => [
+                    'Content-Type: application/json',
+                    'Authorization: Bearer ' . $this->apiKey,
+                    'Content-Length: ' . strlen($jsonPayload)
+                ],
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => $this->timeout,
+                CURLOPT_CONNECTTIMEOUT => 2
+            ]);
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
-        curl_close($ch);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            curl_close($ch);
 
-        if ($error) {
-            return [
-                'success' => false,
-                'error'   => $error,
-                'status'  => $httpCode
-            ];
+            if (!$error && $httpCode >= 200 && $httpCode < 500) {
+                $decoded = json_decode((string)$response, true);
+                return [
+                    'success'  => $httpCode >= 200 && $httpCode < 300,
+                    'status'   => $httpCode,
+                    'response' => $decoded ?? $response
+                ];
+            }
+
+            if ($attempt < $maxAttempts) {
+                usleep($backoffMs);
+                $backoffMs *= 2;
+            }
         }
 
-        $decoded = json_decode((string)$response, true);
         return [
-            'success'  => $httpCode >= 200 && $httpCode < 300,
-            'status'   => $httpCode,
-            'response' => $decoded ?? $response
+            'success' => false,
+            'error'   => $error ?: "HTTP $httpCode",
+            'status'  => $httpCode ?? 0
         ];
     }
 }

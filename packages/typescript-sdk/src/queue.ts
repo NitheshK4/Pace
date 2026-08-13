@@ -43,7 +43,18 @@ export class ResilientTelemetryQueue {
     this.startPeriodicFlush();
   }
 
+  public validateEvent(event: Partial<TelemetryEvent>): boolean {
+    if (!event || typeof event !== 'object') return false;
+    if (!event.provider || typeof event.provider !== 'string' || !event.provider.trim()) return false;
+    if (!event.model || typeof event.model !== 'string' || !event.model.trim()) return false;
+    return true;
+  }
+
   public enqueue(event: TelemetryEvent): void {
+    if (!this.validateEvent(event)) {
+      return; // Silently drop invalid events
+    }
+
     if (this.queue.length >= this.maxQueueSize) {
       // Drop oldest event when queue is full to remain non-blocking
       this.queue.shift();
@@ -67,24 +78,38 @@ export class ResilientTelemetryQueue {
     this.isFlushing = true;
 
     const batch = this.queue.splice(0, this.batchSize);
-    try {
-      const response = await fetch(`${this.endpoint}/v1/ingest/events`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify({ events: batch }),
-      });
+    const maxAttempts = 3;
+    let backoffMs = 100;
 
-      if (!response.ok) {
-        // Drop on failure silently to remain resilient to app crashes
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const response = await fetch(`${this.endpoint}/v1/ingest/events`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`,
+          },
+          body: JSON.stringify({ events: batch }),
+        });
+
+        if (response.ok || (response.status >= 400 && response.status < 500)) {
+          // Success or client error (non-retryable)
+          this.isFlushing = false;
+          return;
+        }
+      } catch (err) {
+        if (this.onError && err instanceof Error) {
+          this.onError(err);
+        }
       }
-    } catch {
-      // Silent catch to prevent telemetry errors from crashing user code
-    } finally {
-      this.isFlushing = false;
+
+      if (attempt < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
+        backoffMs *= 2;
+      }
     }
+
+    this.isFlushing = false;
   }
 
   public getStats(): { pendingEvents: number } {

@@ -34,7 +34,23 @@ class ResilientTelemetryQueue:
         self._thread = threading.Thread(target=self._worker_loop, daemon=True)
         self._thread.start()
 
+    def validate_event(self, event_data: Dict[str, Any]) -> bool:
+        if not isinstance(event_data, dict):
+            return False
+        provider = event_data.get("provider")
+        model = event_data.get("model")
+        if not provider or not isinstance(provider, str) or not provider.strip():
+            return False
+        if not model or not isinstance(model, str) or not model.strip():
+            return False
+        return True
+
     def enqueue(self, event_data: Dict[str, Any]):
+        if not self.validate_event(event_data):
+            self.dropped_events_count += 1
+            logger.warning(f"[Pace Telemetry Invalid] Event missing required provider or model: {event_data}")
+            return
+
         if not event_data.get("event_id"):
             event_data["event_id"] = str(uuid.uuid4())
             
@@ -48,21 +64,24 @@ class ResilientTelemetryQueue:
             )
 
     def _worker_loop(self):
-        client = httpx.Client(timeout=self.timeout)
-        while not self._shutdown_event.is_set():
-            batch = []
-            start_time = time.time()
-            
-            while len(batch) < self.batch_size and (time.time() - start_time) < self.flush_interval:
-                try:
-                    item = self._queue.get(timeout=0.2)
-                    batch.append(item)
-                except queue.Empty:
-                    if self._shutdown_event.is_set():
-                        break
+        try:
+            client = httpx.Client(timeout=self.timeout)
+            while not self._shutdown_event.is_set():
+                batch = []
+                start_time = time.time()
+                
+                while len(batch) < self.batch_size and (time.time() - start_time) < self.flush_interval:
+                    try:
+                        item = self._queue.get(timeout=0.2)
+                        batch.append(item)
+                    except queue.Empty:
+                        if self._shutdown_event.is_set():
+                            break
 
-            if batch:
-                self._send_batch_with_retry(client, batch)
+                if batch:
+                    self._send_batch_with_retry(client, batch)
+        except Exception as exc:
+            logger.error(f"[Pace Worker Thread Error] Worker loop caught exception: {exc}")
 
     def _send_batch_with_retry(self, client: httpx.Client, batch: list):
         url = f"{self.endpoint}/v1/ingest/events"
