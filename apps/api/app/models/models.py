@@ -177,6 +177,10 @@ class AlertDelivery(Base):
     destination_type: Mapped[str] = mapped_column(String(50), nullable=False)  # console, webhook, slack, email
     destination_target: Mapped[str] = mapped_column(String(500), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="sent", nullable=False)  # sent, failed, retrying
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    max_retries: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
+    next_retry_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(255), index=True, nullable=True)
     
     payload_json: Mapped[dict] = mapped_column(JSON, nullable=False)
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
