@@ -66,6 +66,31 @@ async def get_overview(
     err_cnt = row.errors or 0
     err_rate = (err_cnt / total_reqs * 100.0) if total_reqs > 0 else 0.0
 
+    # Calculate real p95 latency percentile
+    p95_val = 0.0
+    if total_reqs > 0:
+        dialect = db.bind.dialect.name if db.bind else ""
+        if dialect == "postgresql":
+            p95_stmt = select(
+                func.percentile_cont(0.95).within_group(UsageEvent.latency_ms.asc())
+            ).where(and_(*conditions, UsageEvent.latency_ms.is_not(None)))
+            p95_res = await db.execute(p95_stmt)
+            p95_scalar = p95_res.scalar_one_or_none()
+            if p95_scalar is not None:
+                p95_val = float(p95_scalar)
+        else:
+            lat_stmt = select(UsageEvent.latency_ms).where(
+                and_(*conditions, UsageEvent.latency_ms.is_not(None))
+            ).order_by(UsageEvent.latency_ms.asc())
+            lat_res = await db.execute(lat_stmt)
+            latencies = [l for l in lat_res.scalars().all() if l is not None]
+            if latencies:
+                k = (len(latencies) - 1) * 0.95
+                f_idx = int(k)
+                c_idx = min(f_idx + 1, len(latencies) - 1)
+                weight = k - f_idx
+                p95_val = float(latencies[f_idx] * (1 - weight) + latencies[c_idx] * weight)
+
     return OverviewResponse(
         total_spend_usd=float(row.total_spend or 0.0),
         total_requests=total_reqs,
@@ -77,7 +102,7 @@ async def get_overview(
         error_rate=round(err_rate, 2),
         rate_limit_count=row.rate_limits or 0,
         avg_latency_ms=round(float(row.avg_latency or 0.0), 2),
-        p95_latency_ms=round(float(row.avg_latency or 0.0) * 1.4, 2),  # Estimated fallback
+        p95_latency_ms=round(p95_val, 2),
         unknown_cost_events_count=row.unknown_costs or 0,
         spend_provenance="estimated_via_pricing_registry"
     )
