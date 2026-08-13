@@ -44,11 +44,47 @@ def clean_headers(incoming_headers: Dict[str, str]) -> Dict[str, str]:
             headers[k] = v
     return headers
 
+def resolve_provider_and_target_url(provider_path: str, headers_dict: Dict[str, str]) -> Tuple[str, str, str]:
+    clean_path = provider_path.lstrip("/")
+    
+    # 1. Header resolution
+    hdr_provider = headers_dict.get("x-pace-provider", "").lower()
+    if hdr_provider in ALLOWLISTED_PROVIDERS:
+        base = ALLOWLISTED_PROVIDERS[hdr_provider]
+        return hdr_provider, f"{base}/{clean_path}", f"/{clean_path}"
+
+    # 2. Path prefix resolution (e.g. v1/openai/chat/completions or openai/v1/messages)
+    parts = clean_path.split("/")
+    if parts[0].lower() in ALLOWLISTED_PROVIDERS:
+        p_name = parts[0].lower()
+        sub_path = "/".join(parts[1:])
+        base = ALLOWLISTED_PROVIDERS[p_name]
+        return p_name, f"{base}/{sub_path}", f"/{sub_path}"
+    elif len(parts) > 1 and parts[0].lower() == "v1" and parts[1].lower() in ALLOWLISTED_PROVIDERS:
+        p_name = parts[1].lower()
+        sub_path = "v1/" + "/".join(parts[2:])
+        base = ALLOWLISTED_PROVIDERS[p_name]
+        return p_name, f"{base}/{sub_path}", f"/{sub_path}"
+
+    # 3. Standard OpenAI / Anthropic endpoints
+    if clean_path.startswith("v1/messages") or clean_path.startswith("messages"):
+        return "anthropic", f"https://api.anthropic.com/{clean_path}", f"/{clean_path}"
+    elif any(clean_path.startswith(p) for p in ("v1/chat/completions", "v1/completions", "v1/embeddings", "v1/models")):
+        return "openai", f"https://api.openai.com/{clean_path}", f"/{clean_path}"
+
+    raise HTTPException(
+        status_code=400,
+        detail=f"Unknown or unsupported LLM provider for path '/{clean_path}'. Specify /v1/openai/..., /v1/anthropic/..., or X-Pace-Provider header."
+    )
+
 @app.api_route("/{provider_path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 async def proxy_forward(request: Request, provider_path: str):
     start_time = time.time()
-    
-    # Determine provider target
+    headers_raw = dict(request.headers)
+    headers = clean_headers(headers_raw)
+
+    provider, target_url, endpoint_path = resolve_provider_and_target_url(provider_path, {k.lower(): v for k, v in headers_raw.items()})
+
     body_bytes = await request.body()
     body_json = {}
     try:
@@ -56,15 +92,6 @@ async def proxy_forward(request: Request, provider_path: str):
             body_json = json.loads(body_bytes)
     except Exception:
         pass
-
-    provider = "openai"
-    target_base = ALLOWLISTED_PROVIDERS["openai"]
-    if "messages" in provider_path or "anthropic" in provider_path:
-        provider = "anthropic"
-        target_base = ALLOWLISTED_PROVIDERS["anthropic"]
-
-    target_url = f"{target_base}/{provider_path}"
-    headers = clean_headers(dict(request.headers))
 
     model_name = body_json.get("model", "unknown-model")
     stream = body_json.get("stream", False)
