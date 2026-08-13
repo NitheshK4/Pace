@@ -23,3 +23,8 @@ async def prepare_database():
     yield
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+
+@pytest.fixture
+async def db_session():
+    async with TestingSessionLocal() as session:
+        yield session

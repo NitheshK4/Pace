@@ -10,6 +10,8 @@ from app.models.models import AlertDelivery
 
 logger = logging.getLogger("pace.alerts")
 
+from app.core.security_url import validate_webhook_url, redact_sensitive_text
+
 class AlertDeliveryService:
     @staticmethod
     async def deliver_alert(
@@ -48,21 +50,26 @@ class AlertDeliveryService:
         status_str = "sent"
         error_msg = None
 
-        if dest_type in ("webhook", "slack") and target_url.startswith("http"):
-            try:
-                headers = {"Content-Type": "application/json"}
-                if secret:
-                    sig = hmac.new(secret.encode("utf-8"), json.dumps(payload).encode("utf-8"), hashlib.sha256).hexdigest()
-                    headers["X-Pace-Signature"] = f"sha256={sig}"
-
-                async with httpx.AsyncClient(timeout=5.0) as client:
-                    resp = await client.post(target_url, json=payload, headers=headers)
-                    if resp.status_code >= 400:
-                        status_str = "failed"
-                        error_msg = f"HTTP {resp.status_code}: {resp.text[:200]}"
-            except Exception as e:
+        if dest_type in ("webhook", "slack"):
+            is_valid, validation_err = validate_webhook_url(target_url)
+            if not is_valid:
                 status_str = "failed"
-                error_msg = str(e)
+                error_msg = redact_sensitive_text(f"SSRF Security Violation: {validation_err}")
+            else:
+                try:
+                    headers = {"Content-Type": "application/json"}
+                    if secret:
+                        sig = hmac.new(secret.encode("utf-8"), json.dumps(payload).encode("utf-8"), hashlib.sha256).hexdigest()
+                        headers["X-Pace-Signature"] = f"sha256={sig}"
+
+                    async with httpx.AsyncClient(timeout=5.0, follow_redirects=False) as client:
+                        resp = await client.post(target_url, json=payload, headers=headers)
+                        if resp.status_code >= 400:
+                            status_str = "failed"
+                            error_msg = redact_sensitive_text(f"HTTP {resp.status_code}: {resp.text[:200]}")
+                except Exception as e:
+                    status_str = "failed"
+                    error_msg = redact_sensitive_text(str(e))
         else:
             # Console destination logging
             logger.info(f"[PACE ALERT DISPATCHED] [{severity.upper()}] {event_type} - Project: {project_id} - Observed: {observed_value} / Limit: {limit_value}")
@@ -78,7 +85,7 @@ class AlertDeliveryService:
             period_start=period_start,
             period_end=period_end,
             destination_type=dest_type,
-            destination_target=target_url[:200],
+            destination_target=redact_sensitive_text(target_url[:200]),
             status=status_str,
             payload_json=payload,
             error_message=error_msg,
