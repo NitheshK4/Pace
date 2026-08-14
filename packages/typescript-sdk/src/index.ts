@@ -21,6 +21,10 @@ export class PaceClient {
     return this.queue.getStats();
   }
 
+  public clear(): void {
+    this.queue.clear();
+  }
+
   public shutdown(): void {
     this.queue.stop();
   }
