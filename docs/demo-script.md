@@ -11,7 +11,8 @@ This script demonstrates the end-to-end flow of **Pace**:
    ```bash
    docker compose up --build -d
    ```
-2. Verify all services reach healthy status (`http://localhost:3000` for Web Console, `http://localhost:8000/healthz` for API).
+2. Verify all services reach healthy status (`http://localhost:3000` for Web Console, `http://localhost:8000/healthz` and `/readyz` for API).
+3. Verify auth session using `GET /v1/auth/me`.
 
 ---
 
