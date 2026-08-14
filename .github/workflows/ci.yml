@@ -23,7 +23,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r apps/api/requirements.txt
-          pip install -r packages/proxy/requirements.txt
+          pip install -e ./packages/proxy
           pip install -e ./packages/python-sdk -e ./apps/api
 
       - name: Run Pytest suite
