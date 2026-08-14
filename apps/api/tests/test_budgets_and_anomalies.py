@@ -40,6 +40,9 @@ async def test_period_bounds():
     assert m_start.month == 7
     assert m_start.day == 1
 
+    w_start, w_end = calculate_period_bounds("weekly", now)
+    assert w_start <= now < w_end
+
 @pytest.mark.asyncio
 async def test_budget_evaluation_and_deduplication():
     async with TestingSessionLocal() as db:
