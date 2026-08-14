@@ -1,4 +1,4 @@
-.PHONY: help verify test-api test-proxy test-python-sdk test-typescript-sdk test-php-sdk test-sdks typecheck-web build-web verify-docker
+.PHONY: help verify test-api test-proxy test-python-sdk test-typescript-sdk test-php-sdk test-sdks typecheck-web build-web verify-docker clean
 
 VENV_PYTEST ?= ./.venv/bin/pytest
 
@@ -40,6 +40,10 @@ build-web:
 
 verify-docker:
 	docker compose config || echo "Docker CLI not active or not installed; skipping docker compose config validation"
+
+clean:
+	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
 
 verify: test-api test-proxy test-sdks typecheck-web build-web verify-docker
 	@echo "=================================================="
