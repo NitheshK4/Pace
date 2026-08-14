@@ -35,4 +35,10 @@ class PaceClientTest extends TestCase {
         $this->assertEquals('http://127.0.0.1:8787/v1/', $config['base_uri']);
         $this->assertEquals('Bearer sk-testkey', $config['headers']['Authorization']);
     }
+
+    public function testSetSystemTag(): void {
+        $client = new PaceClient('pace_test_key', 'http://localhost:9999');
+        $client->setSystemTag('version', '1.2.3');
+        $this->assertTrue(true);
+    }
 }
