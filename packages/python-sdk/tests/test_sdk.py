@@ -135,4 +135,10 @@ def test_attribute_builder():
     assert attrs["user_id"] == "user_42"
     assert attrs["session_id"] == "sess_99"
 
+def test_pace_client_shutdown_and_flush():
+    client = PaceClient(api_key="pace_shutdown_key", endpoint="http://localhost:9999")
+    client.flush(timeout=1.0)
+    client.shutdown(timeout=1.0)
+
+
 

@@ -138,7 +138,7 @@ class PaceClient:
 
     def shutdown(self, timeout: float = 5.0):
         if self.queue:
-            self.queue.stop(timeout=timeout)
+            self.queue.close()
 
     def __enter__(self):
         return self
