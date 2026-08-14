@@ -85,6 +85,7 @@ async def system_diagnostics(db: AsyncSession = Depends(get_db)):
     pid = os.getpid()
 
     return {
+        "status": "ok",
         "component": "pace-api",
         "version": settings.VERSION,
         "environment": settings.ENVIRONMENT,
