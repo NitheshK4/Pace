@@ -1,10 +1,11 @@
-.PHONY: help verify test-api test-proxy test-python-sdk test-typescript-sdk test-php-sdk test-sdks typecheck-web build-web verify-docker clean
+.PHONY: help verify test-api test-proxy test-python-sdk test-typescript-sdk test-php-sdk test-sdks typecheck-web build-web verify-docker clean quick-check
 
 VENV_PYTEST ?= ./.venv/bin/pytest
 
 help: ## Display available local verification targets
 	@echo "Pace Local Verification Commands:"
 	@echo "  make verify               Run complete verification suite (API, Proxy, SDKs, Web, Docker)"
+	@echo "  make quick-check          Run fast unit tests and web typecheck"
 	@echo "  make test-api             Run API unit & integration tests"
 	@echo "  make test-proxy           Run Proxy tests"
 	@echo "  make test-python-sdk      Run Python SDK tests"
@@ -14,6 +15,9 @@ help: ## Display available local verification targets
 	@echo "  make typecheck-web        Typecheck the Next.js web app"
 	@echo "  make build-web            Build the Next.js web app"
 	@echo "  make verify-docker        Validate Docker Compose configuration"
+
+quick-check: test-api test-proxy test-sdks typecheck-web
+	@echo "Quick verification check passed! 🚀"
 
 test-api:
 	PYTHONPATH=apps/api:packages/python-sdk:packages/proxy $(VENV_PYTEST) apps/api/tests
