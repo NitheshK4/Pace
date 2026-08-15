@@ -137,8 +137,8 @@ export default function BudgetsPage() {
                   </div>
                   <div className="text-right font-mono">
                     <div className="text-2xl font-extrabold text-white">{formatINRShort(b.amount_usd, 2)}</div>
-                    <span className="text-[9px] text-pace-emerald font-bold bg-pace-emerald/10 px-2 py-0.5 rounded border border-pace-emerald/30">
-                      ACTIVE CONTROL
+                    <span className="inline-flex items-center gap-1 text-[9px] text-pace-emerald font-bold bg-pace-emerald/10 px-2 py-0.5 rounded border border-pace-emerald/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-pace-emerald animate-pulse"></span> ACTIVE CONTROL
                     </span>
                   </div>
                 </div>
