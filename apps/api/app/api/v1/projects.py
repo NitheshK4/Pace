@@ -105,6 +105,7 @@ async def list_projects(
         select(Project, ProjectMember.role)
         .join(ProjectMember, Project.id == ProjectMember.project_id)
         .where(ProjectMember.user_id == current_user.id)
+        .order_by(Project.created_at.desc())
     )
     result = await db.execute(stmt)
     rows = result.all()
