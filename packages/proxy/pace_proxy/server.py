@@ -16,6 +16,7 @@ PACE_ENDPOINT = os.getenv("PACE_ENDPOINT", "http://localhost:8000")
 PACE_API_KEY = os.getenv("PACE_API_KEY", "pace_demo_proxy_key")
 PROXY_PORT = int(os.getenv("PACE_PROXY_PORT", "8787"))
 PROXY_HOST = os.getenv("PACE_PROXY_HOST", "127.0.0.1")  # Loopback only by default!
+UPSTREAM_TIMEOUT_SECONDS = float(os.getenv("PACE_PROXY_UPSTREAM_TIMEOUT", "60.0"))
 
 # Target Upstream Allowlist
 ALLOWLISTED_PROVIDERS = {
