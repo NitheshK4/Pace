@@ -118,3 +118,7 @@ async def test_streaming_proxy_enqueues_accurate_telemetry():
             assert enqueued_event["provider"] == "openai"
             assert enqueued_event["input_tokens"] == 18
             assert enqueued_event["output_tokens"] == 33
+
+def test_proxy_upstream_timeout_config():
+    from pace_proxy.server import UPSTREAM_TIMEOUT_SECONDS
+    assert UPSTREAM_TIMEOUT_SECONDS > 0
