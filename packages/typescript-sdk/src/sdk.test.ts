@@ -63,4 +63,16 @@ describe('Pace TypeScript SDK', () => {
     assert.strictEqual(client.getStats().pendingEvents, 0);
     client.shutdown();
   });
+
+  test('returns queue size via getQueueSize method', () => {
+    const client = new PaceClient({
+      apiKey: 'pace_test_key_12345',
+      endpoint: 'http://localhost:8000',
+      flushIntervalMs: 10000,
+    });
+    assert.strictEqual(client.getQueueSize(), 0);
+    client.record({ provider: 'openai', model: 'gpt-4o', input_tokens: 10, output_tokens: 5, latency_ms: 100 });
+    assert.strictEqual(client.getQueueSize(), 1);
+    client.shutdown();
+  });
 });
