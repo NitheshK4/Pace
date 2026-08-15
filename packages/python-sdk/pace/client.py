@@ -109,9 +109,10 @@ class PaceClient:
             client = pace.track(openai_client)
             client.chat.completions.create(...)
     """
-    def __init__(self, api_key: Optional[str] = None, endpoint: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, endpoint: Optional[str] = None, custom_headers: Optional[Dict[str, str]] = None):
         self.api_key = api_key
         self.endpoint = endpoint
+        self.custom_headers = custom_headers or {}
         self.queue = get_telemetry_queue(endpoint, api_key)
 
     def track(
