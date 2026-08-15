@@ -1,3 +1,4 @@
+import time
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -72,6 +73,7 @@ app.add_middleware(RateLimitMiddleware)
 # Security Headers & Payload Limit Middleware
 @app.middleware("http")
 async def security_headers_and_limits_middleware(request: Request, call_next):
+    start_t = time.perf_counter()
     # Enforce max body payload limit (1 MB)
     content_length = request.headers.get("content-length")
     if content_length and int(content_length) > 1_048_576:
@@ -81,6 +83,8 @@ async def security_headers_and_limits_middleware(request: Request, call_next):
         )
 
     response = await call_next(request)
+    elapsed_ms = round((time.perf_counter() - start_t) * 1000, 2)
+    response.headers["X-Response-Time-Ms"] = str(elapsed_ms)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
