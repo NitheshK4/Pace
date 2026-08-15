@@ -98,6 +98,7 @@ async def system_diagnostics(db: AsyncSession = Depends(get_db)):
         "demo_mode": settings.DEMO_MODE,
         "worker_enabled": settings.WORKER_ENABLED,
         "data_retention_days": settings.DATA_RETENTION_DAYS,
+        "default_alert_cost_threshold_usd": settings.DEFAULT_ALERT_COST_THRESHOLD_USD,
         "pricing_registry_version": "2024.11"
     }
 
