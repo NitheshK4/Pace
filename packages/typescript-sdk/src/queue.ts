@@ -37,7 +37,7 @@ export class ResilientTelemetryQueue {
     this.endpoint = (options.endpoint || 'http://localhost:8000').replace(/\/$/, '');
     this.batchSize = options.batchSize || 20;
     this.flushIntervalMs = options.flushIntervalMs || 2000;
-    this.maxQueueSize = options.maxQueueSize || 1000;
+    this.maxQueueSize = Math.max(1, options.maxQueueSize || 1000);
     this.onError = options.onError;
 
     this.startPeriodicFlush();
