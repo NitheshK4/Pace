@@ -140,5 +140,10 @@ def test_pace_client_shutdown_and_flush():
     client.flush(timeout=1.0)
     client.shutdown(timeout=1.0)
 
+def test_pace_client_custom_headers():
+    client = PaceClient(api_key="pace_key", endpoint="http://localhost:9999", custom_headers={"X-Custom-Header": "value"})
+    assert client.custom_headers == {"X-Custom-Header": "value"}
+
+
 
 
