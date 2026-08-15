@@ -100,7 +100,7 @@ export default function LiveTailPage() {
       </div>
 
       {/* Filter Tabs Bar */}
-      <div className="bg-pace-surface border border-pace-border rounded-2xl p-3.5 flex items-center justify-between font-mono text-xs shadow-lg">
+      <div className="bg-pace-surface border border-pace-border/80 rounded-2xl p-3.5 flex items-center justify-between font-mono text-xs shadow-xl backdrop-blur-sm">
         <div className="flex items-center space-x-2">
           <span className="text-pace-muted font-bold mr-2 uppercase">Filter Status:</span>
           {(['all', '2xx', '429', '5xx'] as const).map((mode) => (
