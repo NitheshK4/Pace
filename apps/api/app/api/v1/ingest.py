@@ -110,7 +110,12 @@ async def calculate_event_cost(
     total_cost = in_cost + out_cost + cache_cost + reasoning_cost
     return total_cost, "known"
 
-@router.post("/events", response_model=IngestEventResponse)
+@router.post(
+    "/events",
+    response_model=IngestEventResponse,
+    summary="Ingest Telemetry Usage Events",
+    description="Ingest single or batched LLM telemetry usage events. Deduplicates events by event_id and computes real-time cost estimates."
+)
 async def ingest_events(
     payload: Union[IngestEventRequest, IngestBatchRequest, List[IngestEventRequest]],
     api_key: ProjectAPIKey = Depends(authenticate_project_key),
