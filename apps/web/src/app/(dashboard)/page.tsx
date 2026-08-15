@@ -201,7 +201,9 @@ with PaceClient(api_key="YOUR_KEY") as pace:
           </div>
           <div className="text-[10px] font-mono text-pace-muted flex items-center justify-between border-t border-pace-border/60 pt-2">
             <span className="text-pace-lime font-bold">~${overview.total_spend_usd.toFixed(4)} USD</span>
-            <span>Transparent Rates</span>
+            <span className="inline-flex items-center gap-1 text-pace-lime/90 font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-pace-lime animate-pulse"></span> Active
+            </span>
           </div>
         </div>
 
