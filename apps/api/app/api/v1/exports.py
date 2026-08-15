@@ -27,8 +27,12 @@ async def export_events_csv(
     if provider:
         stmt = stmt.where(UsageEvent.provider == provider.lower())
     if start_time:
+        if start_time.tzinfo is None:
+            start_time = start_time.replace(tzinfo=timezone.utc)
         stmt = stmt.where(UsageEvent.time >= start_time)
     if end_time:
+        if end_time.tzinfo is None:
+            end_time = end_time.replace(tzinfo=timezone.utc)
         stmt = stmt.where(UsageEvent.time <= end_time)
     
     stmt = stmt.order_by(desc(UsageEvent.time)).limit(10000)
@@ -88,8 +92,12 @@ async def export_events_json(
     
     stmt = select(UsageEvent).where(UsageEvent.project_id == project_id)
     if start_time:
+        if start_time.tzinfo is None:
+            start_time = start_time.replace(tzinfo=timezone.utc)
         stmt = stmt.where(UsageEvent.time >= start_time)
     if end_time:
+        if end_time.tzinfo is None:
+            end_time = end_time.replace(tzinfo=timezone.utc)
         stmt = stmt.where(UsageEvent.time <= end_time)
     
     stmt = stmt.order_by(desc(UsageEvent.time)).limit(10000)
