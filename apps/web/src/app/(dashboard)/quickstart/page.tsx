@@ -154,6 +154,7 @@ echo "Telemetry event successfully sent to Pace!\\n";`
             <span className="capitalize">{activeTab} Client Integration</span>
           </div>
           <button
+            title={copiedCode ? 'Copied to clipboard!' : 'Copy code snippet'}
             onClick={() => {
               navigator.clipboard.writeText(codeSnippets[activeTab]);
               setCopiedCode(true);
