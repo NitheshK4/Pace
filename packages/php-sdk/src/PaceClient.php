@@ -29,6 +29,14 @@ class PaceClient {
         return $this;
     }
 
+    public function getEndpoint(): string {
+        return $this->endpoint;
+    }
+
+    public function getTimeout(): int {
+        return $this->timeout;
+    }
+
     /**
      * Records a single LLM telemetry event.
      *
