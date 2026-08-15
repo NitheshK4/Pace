@@ -2,6 +2,11 @@ import { Project, ProjectSummary, TimeseriesPoint, BreakdownItem, TelemetryEvent
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/v1';
 
+/**
+ * Generic API fetch wrapper attached with Pace bearer authorization token.
+ * @param endpoint Relative API route path starting with slash
+ * @param options Fetch RequestInit options
+ */
 export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('pace_token') : null;
   
