@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     DATA_RETENTION_DAYS: int = 90
     WORKER_ENABLED: bool = True
 
+    # Alert Threshold Defaults
+    DEFAULT_ALERT_COST_THRESHOLD_USD: float = 100.0
+    DEFAULT_ALERT_LATENCY_THRESHOLD_MS: float = 5000.0
+
     def validate_production_rules(self):
         if self.ENVIRONMENT.lower() == "production":
             sec_key = self.SECRET_KEY.lower()
