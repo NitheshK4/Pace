@@ -122,6 +122,9 @@ class PaceClient:
         tags: Optional[Dict[str, str]] = None,
         enabled: bool = True
     ) -> Any:
+        """
+        Wraps an OpenAI or Anthropic SDK client for automatic LLM usage & cost telemetry tracking.
+        """
         combined_meta = dict(metadata or {})
         if tags:
             combined_meta["tags"] = tags
