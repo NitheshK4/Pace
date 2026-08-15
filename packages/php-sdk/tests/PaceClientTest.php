@@ -41,4 +41,10 @@ class PaceClientTest extends TestCase {
         $client->setSystemTag('version', '1.2.3');
         $this->assertTrue(true);
     }
+
+    public function testClientGetters(): void {
+        $client = new PaceClient('pace_test_key', 'http://localhost:9999/', 5);
+        $this->assertEquals('http://localhost:9999', $client->getEndpoint());
+        $this->assertEquals(5, $client->getTimeout());
+    }
 }
