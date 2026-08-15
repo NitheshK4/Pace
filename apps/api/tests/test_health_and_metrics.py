@@ -10,6 +10,7 @@ async def test_liveness_healthz_endpoint():
         data = res.json()
         assert data["status"] == "healthy"
         assert "uptime_seconds" in data
+        assert "server_start_timestamp" in data
         assert "version" in data
 
 @pytest.mark.asyncio

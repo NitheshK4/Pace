@@ -23,6 +23,7 @@ WORKER_EVALUATION_COUNTER = Counter("pace_worker_evaluation_cycles_total", "Tota
 REQUEST_LATENCY = Histogram("pace_request_latency_seconds", "API request latency seconds")
 
 START_TIME = time.time()
+START_TIMESTAMP = datetime.fromtimestamp(START_TIME, tz=timezone.utc).isoformat()
 
 @router.get("/healthz")
 async def health_check():
@@ -32,6 +33,7 @@ async def health_check():
         "status": "healthy",
         "version": settings.VERSION,
         "uptime_seconds": uptime_seconds,
+        "server_start_timestamp": START_TIMESTAMP,
         "environment": settings.ENVIRONMENT
     }
 
