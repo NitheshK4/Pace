@@ -37,3 +37,8 @@ make verify
 | `make verify-docker` | Validate `docker-compose.yml` configuration |
 
 Before submitting a pull request, make sure `make verify` passes cleanly.
+
+## Troubleshooting & Common Issues
+
+- **Database Migration Warnings**: When running `make test-api`, SQLite in-memory test database is created dynamically. Ensure `alembic` migrations match model declarations.
+- **Node Module Dependencies**: If TypeScript SDK or Web build fails, execute `npm install` inside `packages/typescript-sdk` or `apps/web`.
