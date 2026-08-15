@@ -18,7 +18,7 @@ def get_telemetry_queue(
 ) -> ResilientTelemetryQueue:
     global _global_queue
     if _global_queue is None:
-        target_endpoint = endpoint or os.getenv("PACE_ENDPOINT", "http://localhost:8000")
+        target_endpoint = (endpoint or os.getenv("PACE_ENDPOINT", "http://localhost:8000")).rstrip("/")
         target_key = api_key or os.getenv("PACE_API_KEY", "")
         _global_queue = ResilientTelemetryQueue(endpoint=target_endpoint, api_key=target_key)
     return _global_queue
