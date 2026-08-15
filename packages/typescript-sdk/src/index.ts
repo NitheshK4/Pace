@@ -21,6 +21,10 @@ export class PaceClient {
     return this.queue.getStats();
   }
 
+  public getQueueSize(): number {
+    return this.queue.getStats().pendingEvents;
+  }
+
   public clear(): void {
     this.queue.clear();
   }
