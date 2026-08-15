@@ -27,6 +27,7 @@ export default function ExplorerPage() {
 
   const loadEvents = async (pid: string) => {
     setLoading(true);
+    setSelectedEvent(null);
     try {
       let query = `/analytics/events?project_id=${pid}&limit=50`;
       if (providerFilter) query += `&provider=${encodeURIComponent(providerFilter)}`;
