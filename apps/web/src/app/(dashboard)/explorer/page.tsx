@@ -173,7 +173,27 @@ export default function ExplorerPage() {
             <span>Loading telemetry events...</span>
           </div>
         ) : events.length === 0 ? (
-          <div className="p-8 text-center font-mono text-xs text-pace-muted">No usage events match the current filter parameters.</div>
+          <div className="p-12 text-center font-mono text-xs text-pace-muted space-y-3">
+            <div className="w-12 h-12 rounded-full bg-pace-bg border border-pace-border flex items-center justify-center mx-auto text-pace-muted">
+              <Layers className="w-6 h-6 text-pace-muted" />
+            </div>
+            <div className="text-white font-bold text-sm">No Telemetry Events Found</div>
+            <p className="max-w-md mx-auto text-pace-muted">No usage events match the current filter parameters for this project.</p>
+            {(providerFilter || modelFilter || minLatencyMs || errorsOnly) && (
+              <button
+                onClick={() => {
+                  setProviderFilter('');
+                  setModelFilter('');
+                  setMinLatencyMs('');
+                  setErrorsOnly(false);
+                }}
+                className="mt-2 inline-flex items-center space-x-2 bg-pace-bg border border-pace-border hover:border-pace-lime text-pace-lime text-xs font-mono font-bold px-3 py-1.5 rounded-lg transition"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Reset Filters</span>
+              </button>
+            )}
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs font-mono text-pace-text">
