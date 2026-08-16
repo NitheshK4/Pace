@@ -84,4 +84,16 @@ describe('Pace TypeScript SDK', () => {
       });
     }, /Pace endpoint must be a non-empty string URL/);
   });
+
+  test('clears pending telemetry events on clear()', () => {
+    const client = new PaceClient({
+      apiKey: 'pace_test_key_12345',
+      flushIntervalMs: 10000,
+    });
+    client.record({ provider: 'openai', model: 'gpt-4o', input_tokens: 10, output_tokens: 5, latency_ms: 100 });
+    assert.strictEqual(client.getQueueSize(), 1);
+    client.clear();
+    assert.strictEqual(client.getQueueSize(), 0);
+    client.shutdown();
+  });
 });
