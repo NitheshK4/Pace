@@ -75,6 +75,8 @@ async def test_openai_forwarding_and_headers():
                 headers={"Authorization": "Bearer sk-test-openai-key"}
             )
             assert res.status_code == 200
+            assert "x-pace-proxy-latency-ms" in res.headers
+            assert "x-pace-request-id" in res.headers
             assert mock_client.request.called
             kwargs = mock_client.request.call_args.kwargs
             assert kwargs["url"] == "https://api.openai.com/v1/chat/completions"
