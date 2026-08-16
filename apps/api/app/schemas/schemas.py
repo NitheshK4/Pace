@@ -89,7 +89,7 @@ class IngestEventRequest(BaseModel):
         return v
 
 class IngestBatchRequest(BaseModel):
-    events: List[IngestEventRequest] = Field(min_length=1, max_length=100)
+    events: List[IngestEventRequest] = Field(min_length=1, max_length=500)
 
 class IngestEventResponse(BaseModel):
     status: str = "accepted"

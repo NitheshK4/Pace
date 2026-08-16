@@ -128,6 +128,12 @@ async def ingest_events(
     else:
         events_list = payload
 
+    if len(events_list) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payload batch must contain at least 1 event."
+        )
+
     if len(events_list) > 500:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
