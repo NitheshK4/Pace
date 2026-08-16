@@ -138,7 +138,9 @@ def test_attribute_builder():
 def test_pace_client_shutdown_and_flush():
     client = PaceClient(api_key="pace_shutdown_key", endpoint="http://localhost:9999")
     client.flush(timeout=1.0)
+    assert client.queue._thread.is_alive()
     client.shutdown(timeout=1.0)
+    assert client.queue._shutdown_event.is_set()
 
 def test_pace_client_custom_headers():
     client = PaceClient(api_key="pace_key", endpoint="http://localhost:9999", custom_headers={"X-Custom-Header": "value"})
