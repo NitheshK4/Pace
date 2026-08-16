@@ -34,7 +34,11 @@ export class ResilientTelemetryQueue {
 
   constructor(options: PaceOptions) {
     this.apiKey = options.apiKey;
-    this.endpoint = (options.endpoint || 'http://localhost:8000').replace(/\/$/, '');
+    const rawEndpoint = options.endpoint !== undefined ? options.endpoint : 'http://localhost:8000';
+    if (typeof rawEndpoint !== 'string' || !rawEndpoint.trim()) {
+      throw new TypeError('Pace endpoint must be a non-empty string URL.');
+    }
+    this.endpoint = rawEndpoint.trim().replace(/\/$/, '');
     this.batchSize = options.batchSize || 20;
     this.flushIntervalMs = options.flushIntervalMs || 2000;
     this.maxQueueSize = Math.max(1, options.maxQueueSize || 1000);

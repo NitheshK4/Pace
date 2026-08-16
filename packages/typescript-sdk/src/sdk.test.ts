@@ -75,4 +75,13 @@ describe('Pace TypeScript SDK', () => {
     assert.strictEqual(client.getQueueSize(), 1);
     client.shutdown();
   });
+
+  test('throws TypeError on empty endpoint string', () => {
+    assert.throws(() => {
+      new PaceClient({
+        apiKey: 'pace_key',
+        endpoint: '  ',
+      });
+    }, /Pace endpoint must be a non-empty string URL/);
+  });
 });
