@@ -47,4 +47,18 @@ class PaceClientTest extends TestCase {
         $this->assertEquals('http://localhost:9999', $client->getEndpoint());
         $this->assertEquals(5, $client->getTimeout());
     }
+
+    public function testSetTimeoutValidatesValue(): void {
+        $client = new PaceClient('pace_test_key', 'http://localhost:9999', 5);
+        $client->setTimeout(10);
+        $this->assertEquals(10, $client->getTimeout());
+
+        $caught = false;
+        try {
+            $client->setTimeout(0);
+        } catch (\InvalidArgumentException $e) {
+            $caught = true;
+        }
+        $this->assertTrue($caught, 'Should throw InvalidArgumentException on zero timeout');
+    }
 }

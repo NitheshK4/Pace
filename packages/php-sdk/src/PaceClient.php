@@ -17,6 +17,9 @@ class PaceClient {
         int $timeout = 3,
         array $defaultMetadata = []
     ) {
+        if ($timeout <= 0) {
+            throw new \InvalidArgumentException('Timeout must be a positive integer greater than zero.');
+        }
         $this->apiKey = $apiKey ?? getenv('PACE_API_KEY') ?: '';
         $targetEndpoint = $endpoint ?? getenv('PACE_ENDPOINT') ?: 'http://localhost:8000';
         $this->endpoint = rtrim($targetEndpoint, '/');
@@ -26,6 +29,14 @@ class PaceClient {
 
     public function setSystemTag(string $key, string $value): self {
         $this->defaultMetadata['tags'][$key] = $value;
+        return $this;
+    }
+
+    public function setTimeout(int $timeout): self {
+        if ($timeout <= 0) {
+            throw new \InvalidArgumentException('Timeout must be a positive integer greater than zero.');
+        }
+        $this->timeout = $timeout;
         return $this;
     }
 
