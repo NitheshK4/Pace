@@ -149,3 +149,14 @@ async def test_events_min_latency_and_errors_filtering():
         assert len(data_err["events"]) == 1
         assert data_err["events"][0]["status_code"] == 429
 
+@pytest.mark.asyncio
+async def test_project_whitespace_name_rejection():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        await ac.post("/v1/auth/register", json={"email": "projname@pace.dev", "password": "Password123!"})
+        l_res = await ac.post("/v1/auth/login", json={"email": "projname@pace.dev", "password": "Password123!"})
+        token = l_res.json()["access_token"]
+        auth_headers = {"Authorization": f"Bearer {token}"}
+
+        res = await ac.post("/v1/projects", json={"name": "   "}, headers=auth_headers)
+        assert res.status_code == 422
+

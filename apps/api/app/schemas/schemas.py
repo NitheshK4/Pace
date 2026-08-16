@@ -30,6 +30,12 @@ class UserResponse(BaseModel):
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
 
+    @field_validator("name")
+    def validate_name_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Project name cannot be empty or whitespace only.")
+        return v.strip()
+
 class ProjectResponse(BaseModel):
     id: str
     name: str
