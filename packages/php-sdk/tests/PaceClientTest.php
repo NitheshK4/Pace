@@ -61,4 +61,15 @@ class PaceClientTest extends TestCase {
         }
         $this->assertTrue($caught, 'Should throw InvalidArgumentException on zero timeout');
     }
+
+    public function testRecordBatchValidatesEvents(): void {
+        $client = new PaceClient('pace_test_key', 'http://localhost:9999');
+        $res = $client->recordBatch([
+            ['invalid' => 'no_provider_or_model'],
+            ['provider' => 'openai']
+        ]);
+        $this->assertFalse($res['success']);
+        $this->assertEquals(400, $res['status']);
+        $this->assertEquals('No valid events to submit', $res['error']);
+    }
 }
