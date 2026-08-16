@@ -146,6 +146,16 @@ def test_pace_client_custom_headers():
     client = PaceClient(api_key="pace_key", endpoint="http://localhost:9999", custom_headers={"X-Custom-Header": "value"})
     assert client.custom_headers == {"X-Custom-Header": "value"}
 
+def test_queue_invalid_event_dropping():
+    tq = ResilientTelemetryQueue(endpoint="http://localhost:9999", api_key="pace_key", max_queue_size=10)
+    tq.enqueue({"invalid": "no_provider_or_model"})
+    tq.enqueue({"provider": "openai"})
+    tq.enqueue({"model": "gpt-4o"})
+    assert tq.dropped_events_count == 3
+    stats = tq.get_stats()
+    assert stats["dropped"] == 3
+    tq.close()
+
 
 
 
