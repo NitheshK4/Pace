@@ -38,7 +38,25 @@ make verify
 
 Before submitting a pull request, make sure `make verify` passes cleanly.
 
+## Conventional Commit Standards
+
+Pace follows the Conventional Commits specification. All commit messages must follow the format:
+
+`<type>(<scope>): <short description>`
+
+### Allowed Types
+- `feat`: A new feature or API capability
+- `fix`: A bug fix or error edge-case resolution
+- `test`: Adding or updating unit/integration tests
+- `docs`: Documentation updates or OpenAPI changes
+- `refactor`: Code refactoring without behavioral changes
+- `chore`: Maintenance tasks, scripts, dependencies, or build tool updates
+
+### Allowed Scopes
+- `api`, `web`, `python-sdk`, `typescript-sdk`, `php-sdk`, `proxy`, `scripts`, `dev`
+
 ## Troubleshooting & Common Issues
 
 - **Database Migration Warnings**: When running `make test-api`, SQLite in-memory test database is created dynamically. Ensure `alembic` migrations match model declarations.
 - **Node Module Dependencies**: If TypeScript SDK or Web build fails, execute `npm install` inside `packages/typescript-sdk` or `apps/web`.
+- **Sanity Checks**: Run `python3 scripts/workspace_sanity.py` to verify workspace directory integrity.
