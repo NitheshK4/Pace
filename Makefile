@@ -48,6 +48,9 @@ verify-docker:
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name ".next" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name "dist" -exec rm -rf {} + 2>/dev/null || true
+	find . -type f -name "*.tsbuildinfo" -delete 2>/dev/null || true
 
 verify: test-api test-proxy test-sdks typecheck-web build-web verify-docker
 	@echo "=================================================="
