@@ -52,9 +52,23 @@ async def lifespan(app: FastAPI):
         await worker.stop()
     logger.info("Shutting down Pace API Service.")
 
+openapi_tags = [
+    {"name": "System", "description": "Health diagnostics and Prometheus metrics endpoints"},
+    {"name": "Authentication", "description": "User registration, login, and profile operations"},
+    {"name": "Projects", "description": "Project workspace management and initial API key provisioning"},
+    {"name": "API Keys", "description": "Project API key management, rotation, and revocation"},
+    {"name": "Ingestion", "description": "Real-time telemetry usage event ingestion and deduplication"},
+    {"name": "Analytics", "description": "LLM cost overview, timeseries, breakdown, and event explorer"},
+    {"name": "Pricing Registry", "description": "LLM model token pricing rate configuration"},
+    {"name": "Budgets", "description": "Cost threshold budgets and anomaly alert rules"},
+    {"name": "Exports", "description": "Telemetry event CSV export generation"},
+]
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
+    description="Pace Open-Source LLM Cost Tracking & Optimization Infrastructure API",
     version=settings.VERSION,
+    openapi_tags=openapi_tags,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     lifespan=lifespan
 )
