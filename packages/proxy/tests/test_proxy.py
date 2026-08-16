@@ -14,6 +14,7 @@ async def test_proxy_health():
         assert data["service"] == "pace-proxy"
         assert data["loopback_only"] is True
         assert "allowlisted_providers" in data
+        assert "application/json" in res.headers.get("content-type", "")
 
 def test_clean_headers():
     headers = {
