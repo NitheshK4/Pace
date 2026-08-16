@@ -50,3 +50,30 @@ async def test_p95_latency_calculation():
         assert data["avg_latency_ms"] == 1050.0
         # True 95th percentile for 100..2000 (20 values): index k = 19 * 0.95 = 18.05 => 1900 + 0.05*100 = 1905
         assert data["p95_latency_ms"] == 1905.0
+
+@pytest.mark.asyncio
+async def test_p95_latency_single_event():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        await ac.post("/v1/auth/register", json={"email": "p95_single@pace.dev", "password": "Password123!"})
+        login_res = await ac.post("/v1/auth/login", json={"email": "p95_single@pace.dev", "password": "Password123!"})
+        token = login_res.json()["access_token"]
+
+        proj_res = await ac.post("/v1/projects", json={"name": "Single Event Project"}, headers={"Authorization": f"Bearer {token}"})
+        proj_id = proj_res.json()["project"]["id"]
+        raw_key = proj_res.json()["initial_api_key"]["raw_key"]
+
+        await ac.post("/v1/ingest/events", json={
+            "event_id": "evt_single_1",
+            "provider": "openai",
+            "model": "gpt-4o",
+            "input_tokens": 100,
+            "output_tokens": 50,
+            "latency_ms": 350
+        }, headers={"Authorization": f"Bearer {raw_key}"})
+
+        ov_res = await ac.get(f"/v1/analytics/overview?project_id={proj_id}", headers={"Authorization": f"Bearer {token}"})
+        assert ov_res.status_code == 200
+        data = ov_res.json()
+        assert data["total_requests"] == 1
+        assert data["avg_latency_ms"] == 350.0
+        assert data["p95_latency_ms"] == 350.0
