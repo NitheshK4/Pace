@@ -415,6 +415,21 @@ pricing_rates                           (versioned: provider+model+effective_fro
 
 ---
 
+## 📦 Monorepo Structure
+
+| Component | Language / Framework | Description |
+|:---|:---|:---|
+| **[`apps/api`](apps/api)** | Python 3.11+, FastAPI | Core REST API for ingestion, analytics, budget evaluation, and authentication. |
+| **[`apps/web`](apps/web)** | TypeScript, Next.js 14 | Web dashboard for telemetry exploration, live SSE log feeds, and budget alerts. |
+| **[`packages/python-sdk`](packages/python-sdk)** | Python 3.11+ | Python SDK supporting OpenAI & Anthropic client auto-wrapping and resilient queues. |
+| **[`packages/typescript-sdk`](packages/typescript-sdk)** | TypeScript / Node.js | TypeScript SDK with async batch queueing and automatic retries. |
+| **[`packages/php-sdk`](packages/php-sdk)** | PHP 8.1+ | Lightweight cURL telemetry client and OpenAI proxy helper. |
+| **[`packages/proxy`](packages/proxy)** | Python, FastAPI, httpx | Local zero-code proxy server capturing LLM API headers and SSE streaming metrics. |
+| **[`scripts`](scripts)** | Shell, Python | Automated local verification and workspace sanity check scripts. |
+
+
+---
+
 ## 🤝 Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for complete prerequisites and guidelines.
