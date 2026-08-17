@@ -10,6 +10,7 @@ class PaceClient {
     private string $endpoint;
     private int $timeout;
     private array $defaultMetadata;
+    private array $customHeaders = [];
 
     public function __construct(
         ?string $apiKey = null,
@@ -46,6 +47,15 @@ class PaceClient {
 
     public function getTimeout(): int {
         return $this->timeout;
+    }
+
+    public function setCustomHeader(string $name, string $value): self {
+        $this->customHeaders[$name] = $value;
+        return $this;
+    }
+
+    public function getCustomHeaders(): array {
+        return $this->customHeaders;
     }
 
     /**
