@@ -48,7 +48,7 @@ This script demonstrates the end-to-end flow of **Pace**:
        messages=[{"role": "user", "content": "Hello Pace!"}]
    )
    ```
-2. Or run a direct curl test ingestion:
+2. Or run a direct curl test ingestion (using `Authorization: Bearer <pace_key>` header):
    ```bash
    curl -X POST http://localhost:8000/v1/ingest/events \
      -H "Authorization: Bearer pace_YOUR_KEY" \
