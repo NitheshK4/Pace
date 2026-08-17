@@ -1,4 +1,5 @@
 import time
+import uuid
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -98,6 +99,8 @@ async def security_headers_and_limits_middleware(request: Request, call_next):
 
     response = await call_next(request)
     elapsed_ms = round((time.perf_counter() - start_t) * 1000, 2)
+    req_id = request.headers.get("x-request-id") or str(uuid.uuid4())
+    response.headers["X-Request-ID"] = req_id
     response.headers["X-Response-Time-Ms"] = str(elapsed_ms)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
