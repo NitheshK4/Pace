@@ -125,3 +125,13 @@ async def test_streaming_proxy_enqueues_accurate_telemetry():
 def test_proxy_upstream_timeout_config():
     from pace_proxy.server import UPSTREAM_TIMEOUT_SECONDS
     assert UPSTREAM_TIMEOUT_SECONDS > 0
+
+@pytest.mark.asyncio
+async def test_proxy_non_dict_json_payload():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        mock_client = AsyncMock()
+        mock_client.request.return_value = Response(200, json={"status": "ok"}, headers={"Content-Type": "application/json"})
+        with patch("pace_proxy.server.httpx.AsyncClient", return_value=mock_client):
+            res = await ac.post("/v1/chat/completions", content=b"[1, 2, 3]", headers={"Content-Type": "application/json"})
+            assert res.status_code == 200
+
