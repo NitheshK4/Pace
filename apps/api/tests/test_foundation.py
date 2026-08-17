@@ -169,3 +169,12 @@ async def test_event_ingestion_and_privacy():
         assert ov_data["total_requests"] == 2
         assert ov_data["unknown_cost_events_count"] == 1
         assert ov_data["total_spend_usd"] > 0.0
+
+@pytest.mark.asyncio
+async def test_request_id_header_middleware():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        res = await ac.get("/healthz")
+        assert res.status_code == 200
+        assert "X-Request-ID" in res.headers
+        assert "X-Response-Time-Ms" in res.headers
+
