@@ -57,6 +57,7 @@ Pace follows the Conventional Commits specification. All commit messages must fo
 
 ## Troubleshooting & Common Issues
 
-- **Database Migration Warnings**: When running `make test-api`, SQLite in-memory test database is created dynamically. Ensure `alembic` migrations match model declarations.
+- **Database Migration Warnings**: When running `make test-api`, SQLite in-memory test database is created dynamically. Ensure `alembic` migrations match model declarations. To generate a new migration, run `PYTHONPATH=apps/api alembic -c apps/api/alembic.ini revision --autogenerate -m "description"`.
 - **Node Module Dependencies**: If TypeScript SDK or Web build fails, execute `npm install` inside `packages/typescript-sdk` or `apps/web`.
 - **Sanity Checks**: Run `python3 scripts/workspace_sanity.py` to verify workspace directory integrity.
+
