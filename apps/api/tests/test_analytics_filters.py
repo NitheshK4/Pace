@@ -66,3 +66,8 @@ async def test_analytics_endpoints_consistent_filtering():
         assert sum(pt["requests"] for pt in ts_m["points"]) == 3
         assert sum(item["requests"] for item in bd_m["by_model"]) == 3
         assert ev_m["total"] == 3
+
+        # 3. Test export limit parameter validation (exceeding max limit 10000)
+        invalid_export_res = await ac.get(f"/v1/exports/csv?project_id={proj_id}&limit=99999", headers=user_headers)
+        assert invalid_export_res.status_code == 422
+
