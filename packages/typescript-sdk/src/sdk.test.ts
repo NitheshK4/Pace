@@ -96,4 +96,13 @@ describe('Pace TypeScript SDK', () => {
     assert.strictEqual(client.getQueueSize(), 0);
     client.shutdown();
   });
+
+  test('returns configured flush interval in ms via getFlushIntervalMs', () => {
+    const client = new PaceClient({
+      apiKey: 'pace_test_key_12345',
+      flushIntervalMs: 5000,
+    });
+    assert.strictEqual(client.getFlushIntervalMs(), 5000);
+    client.shutdown();
+  });
 });
