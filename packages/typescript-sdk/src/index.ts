@@ -25,6 +25,10 @@ export class PaceClient {
     return this.queue.getStats().pendingEvents;
   }
 
+  public getFlushIntervalMs(): number {
+    return this.queue.getFlushIntervalMs();
+  }
+
   public clear(): void {
     this.queue.clear();
   }

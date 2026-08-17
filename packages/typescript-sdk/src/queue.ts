@@ -120,6 +120,10 @@ export class ResilientTelemetryQueue {
     return { pendingEvents: this.queue.length };
   }
 
+  public getFlushIntervalMs(): number {
+    return this.flushIntervalMs;
+  }
+
   public clear(): void {
     this.queue = [];
   }
