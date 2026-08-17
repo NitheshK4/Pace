@@ -144,6 +144,12 @@ class PaceClient:
         if self.queue:
             self.queue.close()
 
+    def get_queue_size(self) -> int:
+        """Returns the number of pending events currently queued."""
+        if self.queue and hasattr(self.queue, "queue"):
+            return self.queue.queue.qsize()
+        return 0
+
     def __enter__(self):
         return self
 
