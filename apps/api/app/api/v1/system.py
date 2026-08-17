@@ -43,11 +43,14 @@ async def readiness_check(db: AsyncSession = Depends(get_db)):
     db_ok = False
     migration_info = None
 
+    t0 = time.time()
     try:
         await db.execute(text("SELECT 1"))
         db_ok = True
+        db_ping_ms = round((time.time() - t0) * 1000, 2)
     except Exception as e:
         db_ok = False
+        db_ping_ms = None
 
     if db_ok:
         try:
@@ -64,6 +67,7 @@ async def readiness_check(db: AsyncSession = Depends(get_db)):
         content={
             "status": "ready" if is_ready else "not_ready",
             "database": "connected" if db_ok else "error",
+            "db_ping_ms": db_ping_ms,
             "migration_status": migration_info if migration_info else {"is_up_to_date": False},
             "version": settings.VERSION,
             "environment": settings.ENVIRONMENT
