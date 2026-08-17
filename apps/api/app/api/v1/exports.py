@@ -18,6 +18,7 @@ async def export_events_csv(
     provider: Optional[str] = Query(None),
     start_time: Optional[datetime] = Query(None),
     end_time: Optional[datetime] = Query(None),
+    limit: int = Query(1000, ge=1, le=10000),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -35,7 +36,7 @@ async def export_events_csv(
             end_time = end_time.replace(tzinfo=timezone.utc)
         stmt = stmt.where(UsageEvent.time <= end_time)
     
-    stmt = stmt.order_by(desc(UsageEvent.time)).limit(10000)
+    stmt = stmt.order_by(desc(UsageEvent.time)).limit(limit)
     res = await db.execute(stmt)
     events = res.scalars().all()
 
