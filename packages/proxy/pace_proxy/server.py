@@ -162,7 +162,9 @@ async def proxy_forward(request: Request, provider_path: str):
     body_json = {}
     try:
         if body_bytes:
-            body_json = json.loads(body_bytes)
+            parsed = json.loads(body_bytes)
+            if isinstance(parsed, dict):
+                body_json = parsed
     except Exception:
         pass
 
