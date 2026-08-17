@@ -72,4 +72,12 @@ class PaceClientTest extends TestCase {
         $this->assertEquals(400, $res['status']);
         $this->assertEquals('No valid events to submit', $res['error']);
     }
+
+    public function testCustomHeadersConfiguration(): void {
+        $client = new PaceClient('pace_test_key', 'http://localhost:9999');
+        $client->setCustomHeader('X-Environment', 'staging');
+        $headers = $client->getCustomHeaders();
+        $this->assertArrayHasKey('X-Environment', $headers);
+        $this->assertEquals('staging', $headers['X-Environment']);
+    }
 }
