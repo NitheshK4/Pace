@@ -21,6 +21,7 @@ async def test_readiness_readyz_endpoint():
         assert res.status_code in (200, 503)
         data = res.json()
         assert "database" in data
+        assert "db_ping_ms" in data
         assert "migration_status" in data
 
 @pytest.mark.asyncio
