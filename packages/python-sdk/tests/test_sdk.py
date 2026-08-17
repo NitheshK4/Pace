@@ -156,6 +156,11 @@ def test_queue_invalid_event_dropping():
     assert stats["dropped"] == 3
     tq.close()
 
+def test_pace_client_get_queue_size():
+    client = PaceClient(api_key="pace_key", endpoint="http://localhost:9999")
+    assert client.get_queue_size() >= 0
+    client.shutdown(timeout=1.0)
+
 
 
 
