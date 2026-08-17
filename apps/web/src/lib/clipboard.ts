@@ -20,3 +20,11 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     return false;
   }
 }
+
+export async function copyToClipboardWithFeedback(text: string, onSuccess?: () => void): Promise<boolean> {
+  const success = await copyToClipboard(text);
+  if (success && onSuccess) {
+    onSuccess();
+  }
+  return success;
+}
