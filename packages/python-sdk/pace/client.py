@@ -23,6 +23,11 @@ def get_telemetry_queue(
         _global_queue = ResilientTelemetryQueue(endpoint=target_endpoint, api_key=target_key)
     return _global_queue
 
+def detect_environment() -> str:
+    """Detects runtime execution environment (e.g. production, staging, development)."""
+    env = os.getenv("PACE_ENV") or os.getenv("ENV") or os.getenv("ENVIRONMENT") or "development"
+    return env.lower().strip()
+
 def flush(timeout: float = 5.0):
     global _global_queue
     if _global_queue:
@@ -149,6 +154,10 @@ class PaceClient:
         if self.queue and hasattr(self.queue, "queue"):
             return self.queue.queue.qsize()
         return 0
+
+    def get_environment(self) -> str:
+        """Returns detected execution environment string."""
+        return detect_environment()
 
     def __enter__(self):
         return self
