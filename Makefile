@@ -1,4 +1,4 @@
-.PHONY: help verify test-api test-proxy test-python-sdk test-typescript-sdk test-php-sdk test-sdks typecheck-web build-web verify-docker clean quick-check
+.PHONY: help verify test-api test-proxy test-python-sdk test-typescript-sdk test-php-sdk test-sdks typecheck-web build-web verify-docker clean quick-check lint-python
 
 VENV_PYTEST ?= ./.venv/bin/pytest
 
@@ -6,6 +6,7 @@ help: ## Display available local verification targets
 	@echo "Pace Local Verification Commands:"
 	@echo "  make verify               Run complete verification suite (API, Proxy, SDKs, Web, Docker)"
 	@echo "  make quick-check          Run fast unit tests and web typecheck"
+	@echo "  make lint-python          Run Python syntax checks"
 	@echo "  make test-api             Run API unit & integration tests"
 	@echo "  make test-proxy           Run Proxy tests"
 	@echo "  make test-python-sdk      Run Python SDK tests"
@@ -15,6 +16,10 @@ help: ## Display available local verification targets
 	@echo "  make typecheck-web        Typecheck the Next.js web app"
 	@echo "  make build-web            Build the Next.js web app"
 	@echo "  make verify-docker        Validate Docker Compose configuration"
+
+lint-python:
+	./.venv/bin/python -m py_compile apps/api/app/main.py packages/python-sdk/pace/__init__.py packages/proxy/pace_proxy/server.py
+	@echo "Python syntax check passed! 🐍"
 
 quick-check: test-api test-proxy test-sdks typecheck-web
 	@echo "Quick verification check passed! 🚀"
