@@ -161,6 +161,20 @@ def test_pace_client_get_queue_size():
     assert client.get_queue_size() >= 0
     client.shutdown(timeout=1.0)
 
+from pace.client import detect_environment
+
+def test_detect_environment(monkeypatch):
+    monkeypatch.delenv("PACE_ENV", raising=False)
+    monkeypatch.delenv("ENV", raising=False)
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    assert detect_environment() == "development"
+
+    monkeypatch.setenv("PACE_ENV", "production")
+    assert detect_environment() == "production"
+
+    client = PaceClient(api_key="pace_key")
+    assert client.get_environment() == "production"
+
 
 
 
