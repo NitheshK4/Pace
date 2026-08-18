@@ -34,7 +34,8 @@ async def proxy_health():
         "status": "healthy",
         "service": "pace-proxy",
         "loopback_only": PROXY_HOST == "127.0.0.1",
-        "allowlisted_providers": list(ALLOWLISTED_PROVIDERS.keys())
+        "allowlisted_providers": list(ALLOWLISTED_PROVIDERS.keys()),
+        "server_time": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     }
 
 def clean_headers(incoming_headers: Dict[str, str]) -> Dict[str, str]:
@@ -256,6 +257,7 @@ async def proxy_forward(request: Request, provider_path: str):
             resp_headers["x-pace-proxy-latency-ms"] = str(latency_ms)
             resp_headers["x-pace-proxy-version"] = "0.1.0"
             resp_headers["x-pace-request-id"] = str(uuid.uuid4())
+            resp_headers["x-proxy-server-time"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             return Response(content=resp.content, status_code=resp.status_code, headers=resp_headers)
 
     except Exception as exc:
