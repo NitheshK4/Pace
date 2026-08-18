@@ -137,3 +137,15 @@ async def test_proxy_non_dict_json_payload():
             res = await ac.post("/v1/chat/completions", content=b"[1, 2, 3]", headers={"Content-Type": "application/json"})
             assert res.status_code == 200
 
+from pace_proxy.server import parse_user_agent
+
+def test_parse_user_agent():
+    assert parse_user_agent("") == "unknown"
+    assert parse_user_agent(None) == "unknown"
+    assert parse_user_agent("OpenAI/Python 1.12.0") == "openai-sdk"
+    assert parse_user_agent("anthropic-python/0.8.0") == "anthropic-sdk"
+    assert parse_user_agent("Pace-TS-SDK/0.1.0") == "pace-sdk"
+    assert parse_user_agent("python-requests/2.31.0") == "python-http"
+    assert parse_user_agent("node-fetch/3.0") == "js-runtime"
+    assert parse_user_agent("CustomApp/1.0") == "generic-http"
+
