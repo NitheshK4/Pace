@@ -122,6 +122,10 @@ class ResilientTelemetryQueue:
             "dropped": self.dropped_events_count
         }
 
+    def get_pending_bytes(self, avg_bytes_per_event: int = 256) -> int:
+        """Estimates total memory payload size of currently queued events."""
+        return self._queue.qsize() * avg_bytes_per_event
+
     def flush(self, timeout: float = 5.0):
         start = time.time()
         while not self._queue.empty() and (time.time() - start) < timeout:
