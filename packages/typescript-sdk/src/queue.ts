@@ -17,6 +17,7 @@ export interface PaceOptions {
   batchSize?: number;
   flushIntervalMs?: number;
   maxQueueSize?: number;
+  maxRetries?: number;
   onError?: (err: Error) => void;
 }
 
@@ -27,6 +28,7 @@ export class ResilientTelemetryQueue {
   private batchSize: number;
   private flushIntervalMs: number;
   private maxQueueSize: number;
+  private maxRetries: number;
   private timer: ReturnType<typeof setInterval> | null = null;
   private isFlushing = false;
 
@@ -42,6 +44,7 @@ export class ResilientTelemetryQueue {
     this.batchSize = options.batchSize || 20;
     this.flushIntervalMs = options.flushIntervalMs || 2000;
     this.maxQueueSize = Math.max(1, options.maxQueueSize || 1000);
+    this.maxRetries = options.maxRetries ?? 3;
     this.onError = options.onError;
 
     this.startPeriodicFlush();
@@ -82,7 +85,7 @@ export class ResilientTelemetryQueue {
     this.isFlushing = true;
 
     const batch = this.queue.splice(0, this.batchSize);
-    const maxAttempts = 3;
+    const maxAttempts = Math.max(1, this.maxRetries);
     let backoffMs = 100;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -122,6 +125,10 @@ export class ResilientTelemetryQueue {
 
   public getFlushIntervalMs(): number {
     return this.flushIntervalMs;
+  }
+
+  public getMaxRetries(): number {
+    return this.maxRetries;
   }
 
   public clear(): void {

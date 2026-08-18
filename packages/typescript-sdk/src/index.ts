@@ -29,6 +29,10 @@ export class PaceClient {
     return this.queue.getFlushIntervalMs();
   }
 
+  public getMaxRetries(): number {
+    return this.queue.getMaxRetries();
+  }
+
   public clear(): void {
     this.queue.clear();
   }
