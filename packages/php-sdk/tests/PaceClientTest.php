@@ -80,4 +80,20 @@ class PaceClientTest extends TestCase {
         $this->assertArrayHasKey('X-Environment', $headers);
         $this->assertEquals('staging', $headers['X-Environment']);
     }
+
+    public function testRetryAttemptsConfiguration(): void {
+        $client = new PaceClient('pace_test_key', 'http://localhost:9999');
+        $this->assertEquals(3, $client->getRetryAttempts());
+
+        $client->setRetryAttempts(5);
+        $this->assertEquals(5, $client->getRetryAttempts());
+
+        $caught = false;
+        try {
+            $client->setRetryAttempts(0);
+        } catch (\InvalidArgumentException $e) {
+            $caught = true;
+        }
+        $this->assertTrue($caught, 'Should throw InvalidArgumentException on zero retry attempts');
+    }
 }
