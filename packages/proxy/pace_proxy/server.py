@@ -46,6 +46,23 @@ def clean_headers(incoming_headers: Dict[str, str]) -> Dict[str, str]:
             headers[k] = v
     return headers
 
+def parse_user_agent(user_agent: str) -> str:
+    """Parses incoming User-Agent header into client SDK family identifier."""
+    if not user_agent or not isinstance(user_agent, str):
+        return "unknown"
+    ua = user_agent.lower()
+    if "openai" in ua:
+        return "openai-sdk"
+    if "anthropic" in ua:
+        return "anthropic-sdk"
+    if "pace" in ua:
+        return "pace-sdk"
+    if "python" in ua:
+        return "python-http"
+    if "node" in ua or "fetch" in ua:
+        return "js-runtime"
+    return "generic-http"
+
 def resolve_provider_and_target_url(provider_path: str, headers_dict: Dict[str, str]) -> Tuple[str, str, str]:
     clean_path = provider_path.lstrip("/")
     
