@@ -20,6 +20,15 @@ def parse_time_range(start_time: Optional[datetime], end_time: Optional[datetime
     start = start_time if start_time else (end - timedelta(days=30))
     return start, end
 
+def validate_page_offset(offset: int) -> int:
+    """Validates that pagination offset parameter is non-negative."""
+    if offset < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Pagination offset must be non-negative (>= 0)."
+        )
+    return offset
+
 @router.get("/overview", response_model=OverviewResponse)
 async def get_overview(
     project_id: str = Query(...),
