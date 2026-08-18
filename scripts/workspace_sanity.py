@@ -22,6 +22,12 @@ REQUIRED_PATHS = [
     "packages/proxy/pace_proxy/server.py",
 ]
 
+def estimate_payload_bytes(event_count: int, avg_event_bytes: int = 256) -> int:
+    """Estimates network payload size in bytes for a given event count."""
+    if event_count <= 0:
+        return 0
+    return event_count * avg_event_bytes
+
 def main():
     root = Path(__file__).resolve().parent.parent
     print(f"Running Pace workspace sanity check in: {root}")
