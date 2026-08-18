@@ -56,3 +56,14 @@ async def test_stable_cursor_pagination():
 
         # Total events across all pages == 5
         assert len(set(p1_ids + p2_ids + p3_ids)) == 5
+
+from fastapi import HTTPException
+from app.api.v1.analytics import validate_page_offset
+
+def test_validate_page_offset():
+    assert validate_page_offset(0) == 0
+    assert validate_page_offset(10) == 10
+    with pytest.raises(HTTPException) as exc_info:
+        validate_page_offset(-1)
+    assert exc_info.value.status_code == 400
+    assert "Pagination offset must be non-negative" in exc_info.value.detail
