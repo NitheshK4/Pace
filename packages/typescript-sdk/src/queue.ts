@@ -18,6 +18,7 @@ export interface PaceOptions {
   flushIntervalMs?: number;
   maxQueueSize?: number;
   maxRetries?: number;
+  customHeaders?: Record<string, string>;
   onError?: (err: Error) => void;
 }
 
@@ -29,6 +30,7 @@ export class ResilientTelemetryQueue {
   private flushIntervalMs: number;
   private maxQueueSize: number;
   private maxRetries: number;
+  private customHeaders: Record<string, string>;
   private timer: ReturnType<typeof setInterval> | null = null;
   private isFlushing = false;
 
@@ -45,6 +47,7 @@ export class ResilientTelemetryQueue {
     this.flushIntervalMs = options.flushIntervalMs || 2000;
     this.maxQueueSize = Math.max(1, options.maxQueueSize || 1000);
     this.maxRetries = options.maxRetries ?? 3;
+    this.customHeaders = options.customHeaders || {};
     this.onError = options.onError;
 
     this.startPeriodicFlush();
@@ -95,6 +98,7 @@ export class ResilientTelemetryQueue {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${this.apiKey}`,
+            ...this.customHeaders,
           },
           body: JSON.stringify({ events: batch }),
         });
@@ -129,6 +133,10 @@ export class ResilientTelemetryQueue {
 
   public getMaxRetries(): number {
     return this.maxRetries;
+  }
+
+  public getCustomHeaders(): Record<string, string> {
+    return { ...this.customHeaders };
   }
 
   public clear(): void {

@@ -33,6 +33,10 @@ export class PaceClient {
     return this.queue.getMaxRetries();
   }
 
+  public getCustomHeaders(): Record<string, string> {
+    return this.queue.getCustomHeaders();
+  }
+
   public clear(): void {
     this.queue.clear();
   }
