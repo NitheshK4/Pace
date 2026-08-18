@@ -14,6 +14,7 @@ async def test_proxy_health():
         assert data["service"] == "pace-proxy"
         assert data["loopback_only"] is True
         assert "allowlisted_providers" in data
+        assert "server_time" in data
         assert "application/json" in res.headers.get("content-type", "")
 
 def test_clean_headers():
@@ -78,6 +79,7 @@ async def test_openai_forwarding_and_headers():
             assert res.status_code == 200
             assert "x-pace-proxy-latency-ms" in res.headers
             assert "x-pace-request-id" in res.headers
+            assert "x-proxy-server-time" in res.headers
             assert mock_client.request.called
             kwargs = mock_client.request.call_args.kwargs
             assert kwargs["url"] == "https://api.openai.com/v1/chat/completions"
