@@ -115,4 +115,15 @@ describe('Pace TypeScript SDK', () => {
     assert.strictEqual(customClient.getMaxRetries(), 5);
     customClient.shutdown();
   });
+
+  test('returns configured custom headers via getCustomHeaders', () => {
+    const client = new PaceClient({
+      apiKey: 'pace_test',
+      customHeaders: { 'X-App-Env': 'production', 'X-Region': 'us-east-1' },
+    });
+    const headers = client.getCustomHeaders();
+    assert.strictEqual(headers['X-App-Env'], 'production');
+    assert.strictEqual(headers['X-Region'], 'us-east-1');
+    client.shutdown();
+  });
 });
