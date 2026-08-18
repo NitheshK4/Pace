@@ -55,3 +55,9 @@ def hash_project_api_key(raw_key: str) -> str:
         raw_key.encode("utf-8"),
         hashlib.sha256
     ).hexdigest()
+
+def validate_api_key_format(raw_key: str) -> bool:
+    """Checks if raw API key follows the expected 'pace_' prefix format and minimum length."""
+    if not raw_key or not isinstance(raw_key, str):
+        return False
+    return raw_key.startswith("pace_") and len(raw_key) >= 16

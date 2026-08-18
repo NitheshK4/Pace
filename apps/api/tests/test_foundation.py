@@ -4,7 +4,7 @@ from decimal import Decimal
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from app.core.database import Base, get_db
-from app.core.security import get_password_hash, verify_password, generate_project_api_key, hash_project_api_key
+from app.core.security import get_password_hash, verify_password, generate_project_api_key, hash_project_api_key, validate_api_key_format
 from app.models import models
 from app.main import app
 
@@ -41,6 +41,11 @@ async def test_security_utils():
     assert raw_key.startswith("pace_")
     assert prefix == raw_key[:12]
     assert hash_project_api_key(raw_key) == key_hash
+    assert validate_api_key_format(raw_key) is True
+    assert validate_api_key_format("invalid_key") is False
+    assert validate_api_key_format("pace_short") is False
+    assert validate_api_key_format("") is False
+    assert validate_api_key_format(None) is False
 
 @pytest.mark.asyncio
 async def test_auth_flow():
