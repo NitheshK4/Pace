@@ -9,6 +9,7 @@ class PaceClient {
     private string $apiKey;
     private string $endpoint;
     private int $timeout;
+    private int $retryAttempts = 3;
     private array $defaultMetadata;
     private array $customHeaders = [];
 
@@ -39,6 +40,18 @@ class PaceClient {
         }
         $this->timeout = $timeout;
         return $this;
+    }
+
+    public function setRetryAttempts(int $attempts): self {
+        if ($attempts <= 0) {
+            throw new \InvalidArgumentException('Retry attempts must be a positive integer greater than zero.');
+        }
+        $this->retryAttempts = $attempts;
+        return $this;
+    }
+
+    public function getRetryAttempts(): int {
+        return $this->retryAttempts;
     }
 
     public function getEndpoint(): string {
@@ -168,7 +181,7 @@ class PaceClient {
     private function sendHttpRequest(string $path, array $payload): array {
         $url = $this->endpoint . $path;
         $jsonPayload = json_encode($payload);
-        $maxAttempts = 3;
+        $maxAttempts = $this->retryAttempts;
         $backoffMs = 100000; // 100ms
 
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
