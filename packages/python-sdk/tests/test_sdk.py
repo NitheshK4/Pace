@@ -175,6 +175,12 @@ def test_detect_environment(monkeypatch):
     client = PaceClient(api_key="pace_key")
     assert client.get_environment() == "production"
 
+def test_queue_get_pending_bytes():
+    tq = ResilientTelemetryQueue(endpoint="http://localhost:9999", api_key="pace_key")
+    tq.enqueue({"provider": "openai", "model": "gpt-4o"})
+    assert tq.get_pending_bytes(avg_bytes_per_event=100) >= 100
+    tq.close()
+
 
 
 
