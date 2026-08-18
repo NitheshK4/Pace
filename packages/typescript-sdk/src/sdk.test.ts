@@ -105,4 +105,14 @@ describe('Pace TypeScript SDK', () => {
     assert.strictEqual(client.getFlushIntervalMs(), 5000);
     client.shutdown();
   });
+
+  test('returns configured max retries via getMaxRetries', () => {
+    const defaultClient = new PaceClient({ apiKey: 'pace_test' });
+    assert.strictEqual(defaultClient.getMaxRetries(), 3);
+    defaultClient.shutdown();
+
+    const customClient = new PaceClient({ apiKey: 'pace_test', maxRetries: 5 });
+    assert.strictEqual(customClient.getMaxRetries(), 5);
+    customClient.shutdown();
+  });
 });
