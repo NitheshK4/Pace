@@ -71,6 +71,10 @@ class PaceClient {
         return $this->customHeaders;
     }
 
+    public function hasCustomHeader(string $name): bool {
+        return array_key_exists($name, $this->customHeaders);
+    }
+
     /**
      * Records a single LLM telemetry event.
      *
