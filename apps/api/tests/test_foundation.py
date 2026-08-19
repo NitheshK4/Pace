@@ -183,3 +183,14 @@ async def test_request_id_header_middleware():
         assert "X-Request-ID" in res.headers
         assert "X-Response-Time-Ms" in res.headers
 
+from app.core.security import validate_environment_tag
+
+def test_validate_environment_tag():
+    assert validate_environment_tag(None) is False
+    assert validate_environment_tag("") is False
+    assert validate_environment_tag("invalid_env") is False
+    assert validate_environment_tag("production") is True
+    assert validate_environment_tag("STAGING") is True
+    assert validate_environment_tag("development") is True
+
+
