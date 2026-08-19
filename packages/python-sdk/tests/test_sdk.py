@@ -181,6 +181,17 @@ def test_queue_get_pending_bytes():
     assert tq.get_pending_bytes(avg_bytes_per_event=100) >= 100
     tq.close()
 
+from pace.client import reset_global_queue, get_telemetry_queue
+
+def test_reset_global_queue():
+    q1 = get_telemetry_queue("http://localhost:9999", "key1")
+    assert q1 is not None
+    reset_global_queue()
+    q2 = get_telemetry_queue("http://localhost:9999", "key2")
+    assert q2 is not q1
+    reset_global_queue()
+
+
 
 
 
