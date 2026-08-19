@@ -96,4 +96,12 @@ class PaceClientTest extends TestCase {
         }
         $this->assertTrue($caught, 'Should throw InvalidArgumentException on zero retry attempts');
     }
+
+    public function testHasCustomHeader(): void {
+        $client = new PaceClient('pace_test_key', 'http://localhost:9999');
+        $this->assertFalse($client->hasCustomHeader('X-Environment'));
+
+        $client->setCustomHeader('X-Environment', 'staging');
+        $this->assertTrue($client->hasCustomHeader('X-Environment'));
+    }
 }
