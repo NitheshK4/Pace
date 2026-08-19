@@ -8,6 +8,15 @@ import sys
 import os
 import shutil
 
+def validate_pace_env_vars(env_dict: dict) -> dict:
+    """Validates an environment dictionary for recommended Pace configurations."""
+    results = {
+        "PACE_ENDPOINT": env_dict.get("PACE_ENDPOINT", "http://localhost:8000"),
+        "PACE_ENV": env_dict.get("PACE_ENV", "development"),
+        "has_api_key": bool(env_dict.get("PACE_API_KEY")),
+    }
+    return results
+
 def main():
     print("==================================================")
     print(" Pace Environment Diagnostics Check")
