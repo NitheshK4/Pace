@@ -25,6 +25,10 @@ export class PaceClient {
     return this.queue.getStats().pendingEvents;
   }
 
+  public isQueueEmpty(): boolean {
+    return this.getQueueSize() === 0;
+  }
+
   public getFlushIntervalMs(): number {
     return this.queue.getFlushIntervalMs();
   }
