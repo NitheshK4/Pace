@@ -46,6 +46,13 @@ def clean_headers(incoming_headers: Dict[str, str]) -> Dict[str, str]:
             headers[k] = v
     return headers
 
+def validate_auth_header_format(auth_header: str) -> bool:
+    """Validates if an incoming authorization header begins with Bearer token format."""
+    if not auth_header or not isinstance(auth_header, str):
+        return False
+    parts = auth_header.strip().split()
+    return len(parts) == 2 and parts[0].lower() == "bearer" and len(parts[1]) > 0
+
 def parse_user_agent(user_agent: str) -> str:
     """Parses incoming User-Agent header into client SDK family identifier."""
     if not user_agent or not isinstance(user_agent, str):
