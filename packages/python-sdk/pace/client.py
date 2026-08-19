@@ -28,6 +28,17 @@ def detect_environment() -> str:
     env = os.getenv("PACE_ENV") or os.getenv("ENV") or os.getenv("ENVIRONMENT") or "development"
     return env.lower().strip()
 
+def reset_global_queue():
+    """Flushes, closes, and resets the global telemetry queue instance."""
+    global _global_queue
+    if _global_queue is not None:
+        try:
+            _global_queue.close()
+        except Exception:
+            pass
+        _global_queue = None
+
+
 def flush(timeout: float = 5.0):
     global _global_queue
     if _global_queue:
