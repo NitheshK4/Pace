@@ -61,3 +61,11 @@ def validate_api_key_format(raw_key: str) -> bool:
     if not raw_key or not isinstance(raw_key, str):
         return False
     return raw_key.startswith("pace_") and len(raw_key) >= 16
+
+def validate_environment_tag(env: str) -> bool:
+    """Validates whether environment tag is an allowed deployment identifier."""
+    if not env or not isinstance(env, str):
+        return False
+    allowed = {"production", "staging", "development", "test", "demo"}
+    return env.strip().lower() in allowed
+
