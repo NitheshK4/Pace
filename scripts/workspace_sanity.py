@@ -28,6 +28,8 @@ def estimate_payload_bytes(event_count: int, avg_event_bytes: int = 256) -> int:
         return 0
     return event_count * avg_event_bytes
 
+from check_env import validate_pace_env_vars
+
 def main():
     root = Path(__file__).resolve().parent.parent
     print(f"Running Pace workspace sanity check in: {root}")
@@ -44,6 +46,11 @@ def main():
     if missing:
         print(f"\nSanity check failed: {len(missing)} required path(s) missing.")
         sys.exit(1)
+
+    # Validate env vars helper function sanity
+    env_res = validate_pace_env_vars({"PACE_ENDPOINT": "http://localhost:8000"})
+    assert env_res["PACE_ENDPOINT"] == "http://localhost:8000"
+    assert env_res["has_api_key"] is False
 
     print("\n✨ Workspace sanity check passed successfully!")
     sys.exit(0)
