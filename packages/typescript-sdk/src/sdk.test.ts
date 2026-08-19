@@ -126,4 +126,17 @@ describe('Pace TypeScript SDK', () => {
     assert.strictEqual(headers['X-Region'], 'us-east-1');
     client.shutdown();
   });
+
+  test('checks queue status via isQueueEmpty method', () => {
+    const client = new PaceClient({
+      apiKey: 'pace_test_key',
+      flushIntervalMs: 10000,
+    });
+    assert.strictEqual(client.isQueueEmpty(), true);
+    client.record({ provider: 'openai', model: 'gpt-4o', input_tokens: 10, output_tokens: 5, latency_ms: 100 });
+    assert.strictEqual(client.isQueueEmpty(), false);
+    client.clear();
+    assert.strictEqual(client.isQueueEmpty(), true);
+    client.shutdown();
+  });
 });
