@@ -109,4 +109,10 @@ class PaceClientTest extends TestCase {
         $client = new PaceClient('pace_test_key', 'http://localhost:9999');
         $this->assertEquals(0, $client->getQueueSize());
     }
+
+    public function testMaskApiKeyMasksSecretString(): void {
+        $this->assertEquals('', PaceClient::maskApiKey(''));
+        $this->assertEquals('****', PaceClient::maskApiKey('abcd'));
+        $this->assertEquals('pace*****************', PaceClient::maskApiKey('pace_secret_key_12345'));
+    }
 }
