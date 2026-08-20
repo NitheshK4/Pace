@@ -161,6 +161,11 @@ def test_pace_client_get_queue_size():
     assert client.get_queue_size() >= 0
     client.shutdown(timeout=1.0)
 
+def test_pace_client_has_pending_events():
+    client = PaceClient(api_key="pace_key", endpoint="http://localhost:9999")
+    assert client.has_pending_events() is False
+    client.shutdown(timeout=1.0)
+
 from pace.client import detect_environment
 
 def test_detect_environment(monkeypatch):
