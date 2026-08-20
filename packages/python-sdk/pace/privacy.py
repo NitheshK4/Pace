@@ -24,3 +24,11 @@ def sanitize_metadata(
             sanitized[k] = str(v)[:200]
 
     return sanitized
+
+def mask_sensitive_value(value: str, visible_chars: int = 4) -> str:
+    """Masks a secret string leaving only the prefix visible."""
+    if not value or not isinstance(value, str):
+        return ""
+    if len(value) <= visible_chars:
+        return "*" * len(value)
+    return value[:visible_chars] + "*" * (len(value) - visible_chars)
