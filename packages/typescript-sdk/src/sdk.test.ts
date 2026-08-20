@@ -139,4 +139,10 @@ describe('Pace TypeScript SDK', () => {
     assert.strictEqual(client.isQueueEmpty(), true);
     client.shutdown();
   });
+
+  test('checks client initialization status via isConfigured method', () => {
+    const client = new PaceClient({ apiKey: 'pace_test_key' });
+    assert.strictEqual(client.isConfigured(), true);
+    client.shutdown();
+  });
 });
