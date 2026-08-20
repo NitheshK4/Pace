@@ -75,6 +75,10 @@ class PaceClient {
         return array_key_exists($name, $this->customHeaders);
     }
 
+    public function getQueueSize(): int {
+        return 0;
+    }
+
     /**
      * Records a single LLM telemetry event.
      *
