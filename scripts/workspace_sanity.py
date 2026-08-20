@@ -28,7 +28,7 @@ def estimate_payload_bytes(event_count: int, avg_event_bytes: int = 256) -> int:
         return 0
     return event_count * avg_event_bytes
 
-from check_env import validate_pace_env_vars
+from check_env import validate_pace_env_vars, format_filesize_bytes
 
 def main():
     root = Path(__file__).resolve().parent.parent
@@ -51,6 +51,12 @@ def main():
     env_res = validate_pace_env_vars({"PACE_ENDPOINT": "http://localhost:8000"})
     assert env_res["PACE_ENDPOINT"] == "http://localhost:8000"
     assert env_res["has_api_key"] is False
+
+    # Validate filesize helper function sanity
+    assert format_filesize_bytes(-10) == "0 B"
+    assert format_filesize_bytes(500) == "500 B"
+    assert format_filesize_bytes(2048) == "2.0 KB"
+    assert format_filesize_bytes(2 * 1024 * 1024) == "2.0 MB"
 
     print("\n✨ Workspace sanity check passed successfully!")
     sys.exit(0)
