@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { test, describe } from 'node:test';
-import { PaceClient, ResilientTelemetryQueue } from './index.js';
+import { PaceClient, ResilientTelemetryQueue, maskApiKey } from './index.js';
 
 describe('Pace TypeScript SDK', () => {
   test('initializes client and queues telemetry without throwing', () => {
@@ -144,5 +144,11 @@ describe('Pace TypeScript SDK', () => {
     const client = new PaceClient({ apiKey: 'pace_test_key' });
     assert.strictEqual(client.isConfigured(), true);
     client.shutdown();
+  });
+
+  test('masks API key string correctly via maskApiKey helper', () => {
+    assert.strictEqual(maskApiKey(''), '');
+    assert.strictEqual(maskApiKey('abcd'), '****');
+    assert.strictEqual(maskApiKey('pace_secret_key_12345'), 'pace*****************');
   });
 });
