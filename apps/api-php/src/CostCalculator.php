@@ -49,4 +49,9 @@ class CostCalculator {
 
         return round($inCost + $outCost + $cacheCost + $reasoningCost, 6);
     }
+
+    public static function formatCurrency(float $amount, string $currency = 'USD'): string {
+        $symbol = ($currency === 'USD') ? '$' : '';
+        return $symbol . number_format($amount, 4);
+    }
 }
