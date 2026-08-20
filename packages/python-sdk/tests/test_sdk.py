@@ -187,6 +187,7 @@ def test_queue_get_pending_bytes():
     tq.close()
 
 from pace.client import reset_global_queue, get_telemetry_queue
+from pace.privacy import mask_sensitive_value
 
 def test_reset_global_queue():
     q1 = get_telemetry_queue("http://localhost:9999", "key1")
@@ -195,6 +196,12 @@ def test_reset_global_queue():
     q2 = get_telemetry_queue("http://localhost:9999", "key2")
     assert q2 is not q1
     reset_global_queue()
+
+def test_mask_sensitive_value():
+    assert mask_sensitive_value("") == ""
+    assert mask_sensitive_value(None) == ""
+    assert mask_sensitive_value("abcd") == "****"
+    assert mask_sensitive_value("pace_secret_key_12345") == "pace*****************"
 
 
 
