@@ -183,7 +183,7 @@ async def test_request_id_header_middleware():
         assert "X-Request-ID" in res.headers
         assert "X-Response-Time-Ms" in res.headers
 
-from app.core.security import validate_environment_tag
+from app.core.security import validate_environment_tag, format_token_count
 
 def test_validate_environment_tag():
     assert validate_environment_tag(None) is False
@@ -192,5 +192,11 @@ def test_validate_environment_tag():
     assert validate_environment_tag("production") is True
     assert validate_environment_tag("STAGING") is True
     assert validate_environment_tag("development") is True
+
+def test_format_token_count():
+    assert format_token_count(-5) == "0"
+    assert format_token_count(500) == "500"
+    assert format_token_count(1500) == "1.5k"
+    assert format_token_count(2_500_000) == "2.5M"
 
 
