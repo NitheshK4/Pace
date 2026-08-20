@@ -1,4 +1,4 @@
-.PHONY: help verify test-api test-proxy test-python-sdk test-typescript-sdk test-php-sdk test-sdks typecheck-web build-web verify-docker clean quick-check lint-python
+.PHONY: help verify test-api test-proxy test-python-sdk test-typescript-sdk test-php-sdk test-sdks typecheck-web build-web verify-docker clean quick-check lint-python verify-python-sdk
 
 VENV_PYTEST ?= ./.venv/bin/pytest
 
@@ -32,6 +32,8 @@ test-proxy:
 
 test-python-sdk:
 	PYTHONPATH=packages/python-sdk $(VENV_PYTEST) packages/python-sdk/tests
+
+verify-python-sdk: test-python-sdk lint-python
 
 test-typescript-sdk:
 	cd packages/typescript-sdk && npm run build && npm test
