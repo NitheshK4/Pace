@@ -137,7 +137,7 @@ async def test_proxy_non_dict_json_payload():
             res = await ac.post("/v1/chat/completions", content=b"[1, 2, 3]", headers={"Content-Type": "application/json"})
             assert res.status_code == 200
 
-from pace_proxy.server import parse_user_agent, validate_auth_header_format
+from pace_proxy.server import parse_user_agent, validate_auth_header_format, sanitize_header_value
 
 def test_parse_user_agent():
     assert parse_user_agent("") == "unknown"
@@ -155,5 +155,11 @@ def test_validate_auth_header_format():
     assert validate_auth_header_format("Basic 12345") is False
     assert validate_auth_header_format("Bearer") is False
     assert validate_auth_header_format("Bearer secret_token_123") is True
+
+def test_sanitize_header_value():
+    assert sanitize_header_value(None) == ""
+    assert sanitize_header_value("") == ""
+    assert sanitize_header_value("Bearer key\r\n") == "Bearer key"
+    assert sanitize_header_value("CleanValue") == "CleanValue"
 
 
