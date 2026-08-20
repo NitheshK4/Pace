@@ -53,6 +53,12 @@ def validate_auth_header_format(auth_header: str) -> bool:
     parts = auth_header.strip().split()
     return len(parts) == 2 and parts[0].lower() == "bearer" and len(parts[1]) > 0
 
+def sanitize_header_value(val: str) -> str:
+    """Sanitizes header value string by removing control characters and newlines."""
+    if not val or not isinstance(val, str):
+        return ""
+    return "".join(ch for ch in val if ch.isprintable() and ch not in ("\r", "\n")).strip()
+
 def parse_user_agent(user_agent: str) -> str:
     """Parses incoming User-Agent header into client SDK family identifier."""
     if not user_agent or not isinstance(user_agent, str):
