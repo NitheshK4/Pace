@@ -32,3 +32,11 @@ export function StatusBadge({ status, label, size = 'md' }: StatusBadgeProps) {
     </span>
   );
 }
+
+export function getStatusColorClass(status: string): string {
+  const normalized = (status || '').toLowerCase();
+  if (normalized === 'active' || normalized === 'success') return 'emerald';
+  if (normalized === 'warning') return 'amber';
+  if (normalized === 'error' || normalized === 'inactive') return 'rose';
+  return 'gray';
+}
