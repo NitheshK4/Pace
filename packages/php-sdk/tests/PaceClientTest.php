@@ -104,4 +104,9 @@ class PaceClientTest extends TestCase {
         $client->setCustomHeader('X-Environment', 'staging');
         $this->assertTrue($client->hasCustomHeader('X-Environment'));
     }
+
+    public function testQueueSizeReturnsInteger(): void {
+        $client = new PaceClient('pace_test_key', 'http://localhost:9999');
+        $this->assertEquals(0, $client->getQueueSize());
+    }
 }
