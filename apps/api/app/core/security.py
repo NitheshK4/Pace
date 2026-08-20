@@ -69,3 +69,13 @@ def validate_environment_tag(env: str) -> bool:
     allowed = {"production", "staging", "development", "test", "demo"}
     return env.strip().lower() in allowed
 
+def format_token_count(count: int) -> str:
+    """Formats token count into human readable metric standard (e.g. 1500 -> '1.5k')."""
+    if count < 0:
+        return "0"
+    if count >= 1_000_000:
+        return f"{count / 1_000_000:.1f}M"
+    if count >= 1_000:
+        return f"{count / 1_000:.1f}k"
+    return str(count)
+
