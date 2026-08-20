@@ -79,6 +79,17 @@ class PaceClient {
         return 0;
     }
 
+    public static function maskApiKey(string $apiKey, int $visibleChars = 4): string {
+        if (empty($apiKey)) {
+            return '';
+        }
+        $len = strlen($apiKey);
+        if ($len <= $visibleChars) {
+            return str_repeat('*', $len);
+        }
+        return substr($apiKey, 0, $visibleChars) . str_repeat('*', $len - $visibleChars);
+    }
+
     /**
      * Records a single LLM telemetry event.
      *
