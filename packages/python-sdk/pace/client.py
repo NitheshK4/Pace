@@ -166,6 +166,10 @@ class PaceClient:
             return self.queue.queue.qsize()
         return 0
 
+    def has_pending_events(self) -> bool:
+        """Returns True if there are unsent telemetry events in the queue."""
+        return self.get_queue_size() > 0
+
     def get_environment(self) -> str:
         """Returns detected execution environment string."""
         return detect_environment()
