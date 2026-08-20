@@ -17,6 +17,16 @@ def validate_pace_env_vars(env_dict: dict) -> dict:
     }
     return results
 
+def format_filesize_bytes(bytes_count: int) -> str:
+    """Formats byte counts into human readable size strings."""
+    if bytes_count < 0:
+        return "0 B"
+    if bytes_count >= 1024 * 1024:
+        return f"{bytes_count / (1024 * 1024):.1f} MB"
+    if bytes_count >= 1024:
+        return f"{bytes_count / 1024:.1f} KB"
+    return f"{bytes_count} B"
+
 def main():
     print("==================================================")
     print(" Pace Environment Diagnostics Check")
