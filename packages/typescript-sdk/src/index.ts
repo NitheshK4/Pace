@@ -57,3 +57,9 @@ export class PaceClient {
 export function createPaceClient(options: PaceOptions): PaceClient {
   return new PaceClient(options);
 }
+
+export function maskApiKey(apiKey: string, visibleChars = 4): string {
+  if (!apiKey || typeof apiKey !== 'string') return '';
+  if (apiKey.length <= visibleChars) return '*'.repeat(apiKey.length);
+  return apiKey.slice(0, visibleChars) + '*'.repeat(apiKey.length - visibleChars);
+}
