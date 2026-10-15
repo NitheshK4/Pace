@@ -452,3 +452,4 @@ MIT — see [LICENSE](LICENSE) for details.
 <p align="center">
   <sub>Built with ☕ and a healthy fear of surprise LLM invoices.</sub>
 </p>
+##end
