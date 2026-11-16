@@ -1,3 +1,21 @@
+# ==============================================================================
+# LOGIC OVERVIEW:
+# Asynchronous Background Worker and Distributed Lock Manager.
+# Runs an evaluation cycle every 60 seconds to process pending outbox alert retries,
+# evaluate budget thresholds, and detect cost anomalies across all active projects.
+#
+# CORE CODE HIGHLIGHTS:
+# - DistributedLockManager: Uses PostgreSQL advisory locks (pg_try_advisory_lock)
+#   so that when scaling Pace across multiple container replicas, only ONE worker
+#   executes the evaluation cycle at a time (prevents duplicate alert runs).
+# - BackgroundWorker: Asyncio task loop that manages graceful startup, evaluation execution,
+#   and cancellation on API shutdown.
+# - run_evaluation_cycle(): The 3-phase periodic workflow:
+#   1. Process pending outbox retries (exponential backoff).
+#   2. Evaluate active budgets (BudgetEvaluationService).
+#   3. Detect sudden cost/rate-limit anomalies (AnomalyDetectorService).
+# ==============================================================================
+
 import asyncio
 import logging
 from contextlib import asynccontextmanager
@@ -11,6 +29,13 @@ from app.services.alert_service import AlertDeliveryService
 
 logger = logging.getLogger("pace.worker")
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Distributed Advisory Lock Manager
+# LOGIC:
+# Coordinates multiple horizontal API replicas.
+# In PostgreSQL, uses pg_try_advisory_lock(lock_id). If another replica already
+# holds the lock, this node gracefully skips the cycle without blocking.
+# ------------------------------------------------------------------------------
 class DistributedLockManager:
     WORKER_EVALUATION_LOCK_ID = 884729103
     _active_locks = set()
@@ -80,6 +105,14 @@ class BackgroundWorker:
             logger.debug("Worker loop cancelled.")
             raise
 
+    # --------------------------------------------------------------------------
+    # CORE CODE: Worker Periodic Evaluation Cycle
+    # LOGIC:
+    # 1. Obtains distributed lock (ensures single-replica execution).
+    # 2. Retries transient webhook alert deliveries from outbox.
+    # 3. Evaluates spend for all active budgets against thresholds (50%, 80%, 100%, 120%).
+    # 4. Runs anomaly detection scans for cost spikes (>3x baseline) and 429 rate limit storms.
+    # --------------------------------------------------------------------------
     async def run_evaluation_cycle(self):
         async with AsyncSessionLocal() as db:
             async with DistributedLockManager.acquire_lock(db, DistributedLockManager.WORKER_EVALUATION_LOCK_ID) as acquired:

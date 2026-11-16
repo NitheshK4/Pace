@@ -1,3 +1,21 @@
+# ==============================================================================
+# LOGIC OVERVIEW:
+# This file is the high-throughput telemetry ingestion engine of Pace.
+# It receives single or batched LLM usage events from SDKs and Proxies.
+#
+# KEY RESPONSIBILITIES:
+# 1. Project Ingestion Key Authentication:
+#    Validates Bearer pace_... keys using constant-time HMAC-SHA256 hashes.
+# 2. Real-Time Cost Calculation:
+#    Matches (provider, model) against active pricing rates and computes the
+#    exact monetary cost using arbitrary-precision Decimals.
+# 3. Idempotent Ingestion & Deduplication:
+#    Pre-checks event_id to prevent double-counting telemetry if a network retry occurs.
+# 4. Batch Optimization:
+#    Bulk pre-fetches pricing cards and existing duplicates in single queries
+#    to maintain sub-50ms ingestion latencies even under load.
+# ==============================================================================
+
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple, Union
 from decimal import Decimal
@@ -12,6 +30,14 @@ from app.schemas.schemas import IngestEventRequest, IngestBatchRequest, IngestEv
 
 router = APIRouter(prefix="/ingest", tags=["Ingestion"])
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Project Ingestion Key Authenticator
+# LOGIC:
+# 1. Extracts the 'Bearer pace_...' key from HTTP Authorization headers.
+# 2. Computes the HMAC-SHA256 hash using the server salt.
+# 3. Queries the DB to ensure key exists, is active, and has not expired.
+# 4. Updates last_used_at timestamp for project activity auditing.
+# ------------------------------------------------------------------------------
 async def authenticate_project_key(
     authorization: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_db)
@@ -53,6 +79,21 @@ async def authenticate_project_key(
     api_key.last_used_at = datetime.now(timezone.utc)
     return api_key
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Real-time Event Cost Calculator
+# LOGIC:
+# 1. Client Cost Bypass: If client supplied cost (e.g. custom proxy calculation),
+#    accept it and mark cost_reason as "supplied_by_client".
+# 2. Rate Lookup: Checks memory cache -> DB for exact model rate (e.g. 'gpt-4o').
+# 3. Dated Model Fallback: If exact date suffix missing (e.g. 'gpt-4o-2024-08-06'),
+#    automatically falls back to the base model rate ('gpt-4o').
+# 4. Unknown Model Safety: Returns (None, "unknown_model") - never guesses prices!
+# 5. Financial Math: Uses Decimal arithmetic across 4 distinct dimensions:
+#    - Input tokens
+#    - Output tokens
+#    - Cached input tokens (discounted prompt cache reads)
+#    - Reasoning tokens (e.g. o1/o3-mini internal reasoning)
+# ------------------------------------------------------------------------------
 async def calculate_event_cost(
     provider: str,
     model: str,
@@ -110,6 +151,18 @@ async def calculate_event_cost(
     total_cost = in_cost + out_cost + cache_cost + reasoning_cost
     return total_cost, "known"
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Ingest Events Endpoint (POST /v1/ingest/events)
+# LOGIC:
+# 1. Normalizes single event or batch payload (max 500 events/request).
+# 2. Bulk Optimization:
+#    - Pre-fetches all active pricing rates into memory to eliminate N+1 queries.
+#    - Pre-fetches already-ingested event_ids in this project to instantly identify duplicates.
+# 3. For each unique event:
+#    - Calculates cost estimate via calculate_event_cost().
+#    - Inserts UsageEvent record within a savepoint (nested transaction) to handle race-condition duplicates gracefully.
+# 4. Commits all accepted events and returns {accepted_count, duplicate_count, rejected_count}.
+# ------------------------------------------------------------------------------
 @router.post(
     "/events",
     response_model=IngestEventResponse,

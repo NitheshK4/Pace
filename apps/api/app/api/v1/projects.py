@@ -1,3 +1,16 @@
+# ==============================================================================
+# LOGIC OVERVIEW:
+# This module manages multi-tenant projects and role-based workspace permissions.
+#
+# KEY RESPONSIBILITIES:
+# 1. Project Scoping: Each workspace isolates API keys, telemetry events, and budgets.
+# 2. Permission Guard (check_project_access): Validates membership and minimum role (owner/admin/viewer).
+# 3. Project Creation Workflow:
+#    - Derives URL-safe slug with unique collision handling.
+#    - Adds current user as workspace owner.
+#    - Automatically provisions an initial ingestion API key and reveals the raw secret once.
+# ==============================================================================
+
 import re
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -16,6 +29,12 @@ def slugify(text: str) -> str:
     text = re.sub(r'[^a-z0-9]+', '-', text).strip('-')
     return text or "project"
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Project Access Security Guard
+# LOGIC:
+# Enforces multi-tenant isolation by checking that the authenticated user
+# is a registered member of the project before permitting data reads/writes.
+# ------------------------------------------------------------------------------
 async def check_project_access(project_id: str, user_id: str, db: AsyncSession, min_role: str = "viewer") -> Project:
     stmt = select(Project).join(ProjectMember).where(
         Project.id == project_id,
@@ -27,6 +46,14 @@ async def check_project_access(project_id: str, user_id: str, db: AsyncSession, 
         raise HTTPException(status_code=404, detail="Project not found or access denied")
     return project
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Create Project & Provision Initial Key
+# LOGIC:
+# 1. Slugs project name cleanly.
+# 2. Assigns creating user as project 'owner'.
+# 3. Generates the default Pace Ingestion API Key (raw key shown only once).
+# 4. Records immutable creation entry in AuditLog.
+# ------------------------------------------------------------------------------
 @router.post("", response_model=dict, status_code=201)
 async def create_project(
     req: ProjectCreate,

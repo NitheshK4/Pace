@@ -1,3 +1,16 @@
+# ==============================================================================
+# LOGIC OVERVIEW:
+# This module provides high-performance analytics, timeseries aggregation,
+# cursor-paginated event filtering, and a real-time SSE Live Tail feed.
+#
+# CORE CODE HIGHLIGHTS:
+# - get_overview(): Calculates total spend, token mix, error rates, and p95 latency.
+# - get_timeseries(): Buckets spend and token consumption by hour/day with SQL dialect awareness.
+# - get_breakdown(): Groups spend by provider & model, calculating % cost share.
+# - list_events(): Cursor-based pagination (using base64-encoded timestamp+ID) for high-scale logs.
+# - live_tail_stream(): Server-Sent Events (SSE) stream pushing new telemetry calls in real time.
+# ==============================================================================
+
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
@@ -29,6 +42,16 @@ def validate_page_offset(offset: int) -> int:
         )
     return offset
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Aggregate Overview Endpoint (GET /v1/analytics/overview)
+# LOGIC:
+# 1. Filters usage events by project_id, date range, provider, and model.
+# 2. Computes aggregate sums for spend, input/output/cached/reasoning tokens,
+#    error count (HTTP >= 400), rate limit count (HTTP 429), and average latency.
+# 3. P95 Latency Calculation:
+#    - On PostgreSQL: Uses native percentile_cont(0.95) within group.
+#    - On SQLite (tests/dev): Performs weighted nearest-rank interpolation in Python.
+# ------------------------------------------------------------------------------
 @router.get("/overview", response_model=OverviewResponse)
 async def get_overview(
     project_id: str = Query(...),
@@ -116,6 +139,14 @@ async def get_overview(
         spend_provenance="estimated_via_pricing_registry"
     )
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Timeseries Aggregation Endpoint (GET /v1/analytics/timeseries)
+# LOGIC:
+# 1. Truncates timestamps to hour or day boundaries:
+#    - PostgreSQL uses `date_trunc(granularity, time)`
+#    - SQLite uses `strftime()`
+# 2. Groups by bucket to calculate spend, request volume, total tokens, and errors over time.
+# ------------------------------------------------------------------------------
 @router.get("/timeseries", response_model=TimeseriesResponse)
 async def get_timeseries(
     project_id: str = Query(...),
@@ -177,6 +208,12 @@ async def get_timeseries(
 
     return TimeseriesResponse(granularity=granularity, points=points)
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Cost Breakdown Endpoint (GET /v1/analytics/breakdown)
+# LOGIC:
+# 1. Groups events by provider (OpenAI vs Anthropic) and by model (e.g. gpt-4o vs claude-3-5-sonnet).
+# 2. Computes the % of total budget consumed by each slice for attribution visualization.
+# ------------------------------------------------------------------------------
 @router.get("/breakdown", response_model=BreakdownResponse)
 async def get_breakdown(
     project_id: str = Query(...),
@@ -296,6 +333,13 @@ def decode_cursor(cursor_str: str) -> tuple[Optional[datetime], str]:
         pass
     return None, cursor_str
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Cursor-Paginated Event Explorer (GET /v1/analytics/events)
+# LOGIC:
+# 1. Cursor Pagination: Encodes (timestamp, event_id) into a base64 token.
+#    Avoids OFFSET performance degradation when querying millions of historical logs.
+# 2. Advanced Filtering: Supports filtering by status code, errors-only, and minimum latency.
+# ------------------------------------------------------------------------------
 @router.get("/events", response_model=EventsListResponse)
 async def list_events(
     project_id: str = Query(...),
@@ -379,6 +423,15 @@ from fastapi.responses import StreamingResponse
 import json
 import asyncio
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Real-Time Live Tail Stream (GET /v1/analytics/live-tail)
+# LOGIC:
+# 1. Server-Sent Events (SSE) Protocol: Unidirectional real-time event streaming.
+# 2. Async Event Generator: Polls for newly arrived UsageEvents every 2 seconds.
+# 3. Stream Format: Pushes formatted SSE 'data: {...}\n\n' chunks to the frontend.
+# 4. Keep-Alive: Emits ': ping\n\n' comments during idle periods to prevent intermediate proxies
+#    or load balancers from terminating the HTTP connection.
+# ------------------------------------------------------------------------------
 @router.get("/live-tail")
 async def live_tail_stream(
     project_id: str = Query(...),

@@ -1,3 +1,19 @@
+# ==============================================================================
+# LOGIC OVERVIEW:
+# SQLAlchemy ORM Schema defining the 8 core tables of Pace.
+#
+# KEY TABLES & ARCHITECTURE:
+# 1. users: Authentication accounts with hashed passwords.
+# 2. projects & project_members: Multi-tenant workspace boundaries & RBAC.
+# 3. project_api_keys: HMAC-SHA256 hashed client secrets.
+# 4. usage_events: High-volume telemetry store. Intentionally stores zero prompt text.
+#    Indexed on (project_id, time) and (project_id, provider, model) for rapid aggregation.
+# 5. pricing_rates: Model pricing matrix versioned by provider, model, and effective_from.
+# 6. budgets: Cost and request limits with configurable threshold percentages.
+# 7. alert_deliveries: Deduplicated dispatch history to Slack/webhooks with retry state.
+# 8. audit_logs: Immutable operational audit log for SOC2/compliance.
+# ==============================================================================
+
 import uuid
 from datetime import datetime, timezone
 from typing import Optional, List
@@ -62,6 +78,14 @@ class ProjectMember(Base):
         UniqueConstraint("project_id", "user_id", name="uq_project_user"),
     )
 
+# ------------------------------------------------------------------------------
+# CORE CODE: ProjectAPIKey Model
+# LOGIC:
+# Enforces zero-secret exposure.
+# - Stores non-sensitive 'key_prefix' (first 16 chars) so users can identify their keys.
+# - Stores SHA256 'key_hash' for constant-time lookup.
+# - Tracks last_used_at timestamp for security rotation hygiene.
+# ------------------------------------------------------------------------------
 class ProjectAPIKey(Base):
     __tablename__ = "project_api_keys"
 
@@ -77,6 +101,16 @@ class ProjectAPIKey(Base):
 
     project: Mapped["Project"] = relationship("Project", back_populates="api_keys")
 
+# ------------------------------------------------------------------------------
+# CORE CODE: UsageEvent Model (Primary Telemetry Store)
+# LOGIC:
+# Designed for high write throughput and zero data leaks:
+# 1. Zero Prompt Text: No messages, system prompts, or LLM responses are stored.
+# 2. Token Breakdown: Separates prompt, completion, cache read, and reasoning tokens.
+# 3. Numeric Precision: cost_usd is Numeric(14, 8) to prevent floating-point rounding errors.
+# 4. Composite Indices: Fast range scans on (project_id, time) and (project_id, provider, model).
+# 5. Idempotency: uq_project_event constraint prevents duplicate billing on network retry.
+# ------------------------------------------------------------------------------
 class UsageEvent(Base):
     __tablename__ = "usage_events"
 
@@ -112,6 +146,12 @@ class UsageEvent(Base):
         Index("idx_events_project_status", "project_id", "status_code"),
     )
 
+# ------------------------------------------------------------------------------
+# CORE CODE: PricingRate Model (Rate Cards Registry)
+# LOGIC:
+# Maintains versioned pricing cards per 1,000 tokens for accurate cost calculation.
+# Supports 4 pricing vectors: input, output, cache read, and reasoning.
+# ------------------------------------------------------------------------------
 class PricingRate(Base):
     __tablename__ = "pricing_rates"
 

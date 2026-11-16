@@ -1,3 +1,18 @@
+# ==============================================================================
+# LOGIC OVERVIEW:
+# Alert Delivery & Outbox Reliability Engine.
+# Dispatches notifications to webhooks, Slack, or logs with enterprise-grade resilience.
+#
+# CORE CODE HIGHLIGHTS:
+# - Idempotency & Deduplication: Synthesizes a composite key (project:budget:type:threshold:period_start)
+#   to prevent double-alerting.
+# - SSRF Protection: Calls validate_webhook_url() to block private network attacks
+#   (e.g., 127.0.0.1, 169.254.169.254, RFC-1918 addresses).
+# - Cryptographic Signatures: Signs outgoing webhook payloads with HMAC-SHA256 headers.
+# - Outbox Pattern & Exponential Backoff: Failed webhook calls enter 'retrying' state and are
+#   retried automatically with exponential backoff up to max_retries.
+# ==============================================================================
+
 import hmac
 import hashlib
 import json
@@ -12,6 +27,15 @@ from app.core.security_url import validate_webhook_url, redact_sensitive_text
 
 logger = logging.getLogger("pace.alerts")
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Alert Dispatcher with Deduplication & SSRF Protection
+# LOGIC:
+# 1. Checks if idempotency_key has already been delivered in this period; skips if found.
+# 2. Validates webhook destination against SSRF blacklist.
+# 3. Computes HMAC-SHA256 signature header if secret is configured.
+# 4. Attempts delivery via httpx. If target returns 5xx/timeout, transitions to 'retrying'.
+# 5. Records complete delivery receipt in AlertDelivery table.
+# ------------------------------------------------------------------------------
 class AlertDeliveryService:
     @staticmethod
     async def deliver_alert(

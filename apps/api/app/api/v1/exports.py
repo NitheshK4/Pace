@@ -1,3 +1,14 @@
+# ==============================================================================
+# LOGIC OVERVIEW:
+# This module provides CSV and JSON telemetry export capabilities for financial auditing,
+# accounting reconciliation, and external data warehousing.
+#
+# CORE CODE HIGHLIGHTS:
+# - export_events_csv(): Generates formatted RFC-4180 CSV downloads directly into memory buffer.
+# - export_events_json(): Returns structured JSON dump of raw usage events.
+# - Automatic Audit Trail: Logs all export operations to track who accessed telemetry data.
+# ==============================================================================
+
 import csv
 import io
 from datetime import datetime, timezone
@@ -12,6 +23,14 @@ from app.models.models import User, UsageEvent, AuditLog
 
 router = APIRouter(prefix="/exports", tags=["Exports"])
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Export Events CSV (GET /v1/exports/csv)
+# LOGIC:
+# 1. Enforces project access check.
+# 2. Applies date range & provider filters; limits result set (default 1,000, max 10,000).
+# 3. Streams formatted CSV columns (including token breakdowns, costs, latency, status codes).
+# 4. Appends audit record and returns response with Content-Disposition attachment header.
+# ------------------------------------------------------------------------------
 @router.get("/csv")
 async def export_events_csv(
     project_id: str = Query(...),

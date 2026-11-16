@@ -1,3 +1,18 @@
+# ==============================================================================
+# LOGIC OVERVIEW:
+# This module manages the LLM Pricing Registry.
+#
+# KEY RESPONSIBILITIES:
+# 1. Default Price Seeding: Automatically seeds standard benchmark token rates
+#    for major providers (OpenAI, Anthropic) per 1,000 tokens.
+# 2. Multi-dimensional Pricing: Stores 4 separate rates per model:
+#    - Input (prompt tokens)
+#    - Output (completion tokens)
+#    - Cache Read (prompt cache hits)
+#    - Reasoning (thinking tokens)
+# 3. Custom Rate Overrides: Allows enterprise users to insert custom discounted rates.
+# ==============================================================================
+
 from typing import List
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -11,6 +26,12 @@ from app.schemas.schemas import PricingRateCreate, PricingRateResponse
 
 router = APIRouter(prefix="/pricing", tags=["Pricing"])
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Default Pricing Seed Registry
+# LOGIC:
+# Benchmark rate cards from official provider pricing pages (OpenAI & Anthropic).
+# Rates are specified in USD per 1,000 tokens as precise Decimals.
+# ------------------------------------------------------------------------------
 DEFAULT_PRICING_SEED = [
     {"provider": "openai", "model": "gpt-4o", "input": Decimal("0.00250"), "output": Decimal("0.01000"), "cache": Decimal("0.00125"), "reasoning": Decimal("0.01000"), "url": "https://openai.com/api/pricing/"},
     {"provider": "openai", "model": "gpt-4o-mini", "input": Decimal("0.00015"), "output": Decimal("0.00060"), "cache": Decimal("0.000075"), "reasoning": Decimal("0.00060"), "url": "https://openai.com/api/pricing/"},
@@ -21,6 +42,11 @@ DEFAULT_PRICING_SEED = [
     {"provider": "anthropic", "model": "claude-3-opus-20240229", "input": Decimal("0.01500"), "output": Decimal("0.07500"), "cache": Decimal("0.00150"), "reasoning": Decimal("0.07500"), "url": "https://www.anthropic.com/pricing"},
 ]
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Seed Default Pricing Rates
+# LOGIC:
+# Ensures the database has baseline rates on startup without overwriting customized user rates.
+# ------------------------------------------------------------------------------
 async def seed_default_pricing_rates(db: AsyncSession):
     for item in DEFAULT_PRICING_SEED:
         stmt = select(PricingRate).where(

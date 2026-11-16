@@ -1,3 +1,16 @@
+# ==============================================================================
+# LOGIC OVERVIEW:
+# This is the primary FastAPI entry point for Pace API.
+# It initializes the application lifecycle (seeding pricing rates & demo users),
+# mounts security middlewares (CORS, Rate Limiting, 1MB payload caps, security headers),
+# starts/stops the background scheduler worker, and mounts all v1 API routers.
+#
+# CORE CODE HIGHLIGHTS:
+# - lifespan(): Application lifecycle manager (seeds rates, boots background worker).
+# - security_headers_and_limits_middleware(): Enforces 1MB payload cap & attaches telemetry headers.
+# - app.include_router(...): Aggregates all modular route domains under /v1.
+# ==============================================================================
+
 import time
 import uuid
 from fastapi import FastAPI, Request
@@ -27,6 +40,14 @@ from app.worker.scheduler import BackgroundWorker
 
 worker = BackgroundWorker()
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Application Lifespan Handler
+# LOGIC:
+# 1. On startup: Opens an async DB session to seed default LLM pricing rates
+#    (OpenAI, Anthropic) if they don't exist yet, and creates a demo user if DEMO_MODE=true.
+# 2. Starts the background worker thread (evaluates budgets/anomalies every 60s).
+# 3. On shutdown: Gracefully stops the background worker to avoid dangling async tasks.
+# ------------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Seed default pricing rates and demo user if configured
@@ -85,7 +106,14 @@ app.add_middleware(
 )
 app.add_middleware(RateLimitMiddleware)
 
-# Security Headers & Payload Limit Middleware
+# ------------------------------------------------------------------------------
+# CORE CODE: Security Headers, Latency Measurement & Payload Limit Middleware
+# LOGIC:
+# 1. Protection against DoS: Rejects request bodies > 1 MB with HTTP 413.
+# 2. Telemetry & Auditing: Measures request duration with high-precision perf_counter
+#    and adds X-Response-Time-Ms and X-Request-ID headers.
+# 3. HTTP Security: Sets nosniff, DENY frame options, and XSS protection.
+# ------------------------------------------------------------------------------
 @app.middleware("http")
 async def security_headers_and_limits_middleware(request: Request, call_next):
     start_t = time.perf_counter()
@@ -116,7 +144,12 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "An internal server error occurred. Please check server diagnostics."}
     )
 
-# Include Routers
+# ------------------------------------------------------------------------------
+# CORE CODE: Mounting Subsystem Routers
+# LOGIC:
+# Registers modular endpoints under /v1 (Auth, Projects, Keys, Ingestion,
+# Analytics, Pricing, Budgets, Exports) plus root system diagnostics (/healthz, /metrics).
+# ------------------------------------------------------------------------------
 app.include_router(system_router)
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(projects_router, prefix=settings.API_V1_STR)

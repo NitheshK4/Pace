@@ -1,3 +1,16 @@
+# ==============================================================================
+# LOGIC OVERVIEW:
+# This module handles API key lifecycle management (creation, listing, revocation).
+#
+# KEY SECURITY PROPERTIES:
+# 1. Zero Secret Storage: The raw secret 'pace_...' is generated and returned to the caller ONCE.
+#    Only the HMAC-SHA256 hash is saved in the database.
+# 2. Key Identification: Stores a non-sensitive 'key_prefix' (e.g. 'pace_live_ab12...')
+#    allowing users to recognize keys without compromising the secret.
+# 3. Soft Revocation: Revocation marks is_active=False instead of hard deletion
+#    to maintain referential integrity in audit records.
+# ==============================================================================
+
 from typing import List
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -27,6 +40,13 @@ async def list_keys(
     keys = result.scalars().all()
     return keys
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Create Ingestion Key Endpoint (POST /projects/{id}/keys)
+# LOGIC:
+# 1. Calls generate_project_api_key() returning (raw_key, key_hash, key_prefix).
+# 2. Computes optional expiration date.
+# 3. Saves hashed token to DB; returns raw_key to caller in response.
+# ------------------------------------------------------------------------------
 @router.post("", response_model=APIKeyCreatedResponse, status_code=201)
 async def create_key(
     project_id: str,

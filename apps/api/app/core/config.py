@@ -1,3 +1,15 @@
+# ==============================================================================
+# LOGIC OVERVIEW:
+# Central configuration management powered by Pydantic Settings.
+# Reads environment variables from .env or system environment with typed defaults.
+#
+# CORE CODE HIGHLIGHTS:
+# - Settings model: Centralizes DB URLs, JWT secret keys, HMAC salts, CORS whitelist,
+#   and data retention parameters.
+# - validate_production_rules(): Startup security validator preventing dangerous production
+#   misconfigurations (e.g. default secrets, demo accounts, or wildcard CORS).
+# ==============================================================================
+
 import os
 from typing import List, Union
 from pydantic import Field, validator
@@ -52,6 +64,14 @@ class Settings(BaseSettings):
     DEFAULT_ALERT_COST_THRESHOLD_USD: float = 100.0
     DEFAULT_ALERT_LATENCY_THRESHOLD_MS: float = 5000.0
 
+    # --------------------------------------------------------------------------
+    # CORE CODE: Production Security Validator
+    # LOGIC:
+    # Crashes on startup if ENVIRONMENT=production and any insecure defaults remain:
+    # - Default SECRET_KEY or INGESTION_KEY_SALT
+    # - DEMO_MODE left active
+    # - Wildcard '*' in CORS_ORIGINS
+    # --------------------------------------------------------------------------
     def validate_production_rules(self):
         if self.ENVIRONMENT.lower() == "production":
             sec_key = self.SECRET_KEY.lower()

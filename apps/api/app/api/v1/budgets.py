@@ -1,3 +1,15 @@
+# ==============================================================================
+# LOGIC OVERVIEW:
+# This module manages cost budgets, spending thresholds, and alert delivery history.
+#
+# KEY RESPONSIBILITIES:
+# 1. Budget Definition: Sets dollar caps per period (daily, weekly, monthly, rolling_24h)
+#    and percentage trigger thresholds (e.g. 50%, 80%, 100%, 120%).
+# 2. Multi-destination Routing: Dispatches alerts to webhooks, Slack, or console.
+# 3. Alert History: Exposes the audit log of all delivered alerts to the dashboard.
+# 4. Audit Trail: Automatically logs administrative changes to the AuditLog table.
+# ==============================================================================
+
 from typing import List, Optional
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -37,6 +49,14 @@ async def list_budgets(
         } for b in budgets
     ]
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Create Budget Endpoint (POST /v1/budgets)
+# LOGIC:
+# 1. Verifies admin authorization on the target project.
+# 2. Stores the spending limit using Decimal precision.
+# 3. Configures alert thresholds (e.g. [50, 80, 100, 120]%) and cooldown windows.
+# 4. Writes an immutable audit log entry for organizational compliance.
+# ------------------------------------------------------------------------------
 @router.post("", status_code=201)
 async def create_budget(
     payload: dict,

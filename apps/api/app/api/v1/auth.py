@@ -1,3 +1,15 @@
+# ==============================================================================
+# LOGIC OVERVIEW:
+# This module provides user authentication and session management.
+#
+# KEY RESPONSIBILITIES:
+# 1. JWT & Cookie Dual Auth: Accepts JWT tokens either from Authorization Bearer
+#    headers (for programmatic API use) or HttpOnly cookies (for the Next.js web app).
+# 2. Secure Password Hashing: Uses Argon2/bcrypt for safe credential verification.
+# 3. User Identity Dependency (get_current_user): Injected across protected routes
+#    to enforce authentication and retrieve the active User object.
+# ==============================================================================
+
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +23,13 @@ from app.core.config import settings
 router = APIRouter(prefix="/auth", tags=["Auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/v1/auth/login", auto_error=False)
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Current User Resolver Dependency
+# LOGIC:
+# 1. Inspects the HTTP Authorization header or 'pace_session' HttpOnly cookie.
+# 2. Decodes and cryptographically validates the signed JWT access token.
+# 3. Fetches the active User entity from the DB; rejects inactive or deleted accounts.
+# ------------------------------------------------------------------------------
 async def get_current_user(
     request: Request,
     token: str = Depends(oauth2_scheme),

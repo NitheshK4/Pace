@@ -1,3 +1,15 @@
+# ==============================================================================
+# LOGIC OVERVIEW:
+# This module provides system observability, health probes, Prometheus metrics,
+# diagnostics, and automated data retention purging.
+#
+# CORE CODE HIGHLIGHTS:
+# - health_check (/healthz): Kubernetes/Docker liveness probe returning process uptime.
+# - readiness_check (/readyz): Verifies live database connectivity and checks Alembic migrations.
+# - prometheus_metrics (/metrics): Exports Prometheus counters and histograms.
+# - purge_old_telemetry: Cleans up historical UsageEvents past retention period (e.g. 90 days).
+# ==============================================================================
+
 import os
 import time
 from datetime import datetime, timedelta, timezone
@@ -14,7 +26,12 @@ from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, Counter, His
 
 router = APIRouter(tags=["System"])
 
-# Operational Metrics
+# ------------------------------------------------------------------------------
+# CORE CODE: Prometheus Telemetry Metrics Registry
+# LOGIC:
+# Tracks operational indicators: ingested events, batch sizes, HTTP status codes,
+# alert dispatch counts, and request latencies.
+# ------------------------------------------------------------------------------
 INGESTION_COUNTER = Counter("pace_ingested_events_total", "Total ingested LLM usage events", ["provider", "status"])
 INGESTION_BATCH_HISTOGRAM = Histogram("pace_ingestion_batch_size", "Ingestion batch payload sizes")
 HTTP_REQUESTS_TOTAL = Counter("pace_http_requests_total", "Total HTTP requests received", ["method", "endpoint", "status"])
@@ -25,6 +42,13 @@ REQUEST_LATENCY = Histogram("pace_request_latency_seconds", "API request latency
 START_TIME = time.time()
 START_TIMESTAMP = datetime.fromtimestamp(START_TIME, tz=timezone.utc).isoformat()
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Health & Readiness Probes
+# LOGIC:
+# - /healthz: Immediate liveness probe for process supervision.
+# - /readyz: Deep readiness check executing 'SELECT 1' against DB and checking
+#   Alembic migration version heads before serving live traffic.
+# ------------------------------------------------------------------------------
 @router.get("/healthz")
 async def health_check():
     """Liveness probe: returns HTTP 200 as long as API process is running."""

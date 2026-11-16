@@ -1,3 +1,16 @@
+# ==============================================================================
+# LOGIC OVERVIEW:
+# Statistical anomaly detection service for proactive incident alerting.
+#
+# CORE CODE HIGHLIGHTS:
+# - detect_anomalies():
+#   1. Compares recent 1-hour activity against a 7-day historical hourly baseline.
+#   2. Safeguards against false positives by requiring minimum sample volumes.
+#   3. Triggers 'cost_spike' alerts if spend surges > 3x the baseline.
+#   4. Triggers 'rate_limit_spike' alerts if HTTP 429 errors exceed 10 in 1 hour.
+# - calculate_forecast(): Linear month-end spend projection based on elapsed period time.
+# ==============================================================================
+
 import math
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
@@ -6,6 +19,13 @@ from sqlalchemy import select, func, and_, case
 from app.models.models import UsageEvent, AlertDelivery
 from app.services.alert_service import AlertDeliveryService
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Anomaly Detector Engine
+# LOGIC:
+# Calculates ratio = recent_1h_spend / historical_hourly_baseline.
+# If ratio > 3.0x -> Dispatches CRITICAL cost spike anomaly.
+# If recent 429s > 10 -> Dispatches WARNING rate-limit storm alert.
+# ------------------------------------------------------------------------------
 class AnomalyDetectorService:
     @staticmethod
     async def detect_anomalies(db: AsyncSession, project_id: str) -> List[Dict[str, Any]]:

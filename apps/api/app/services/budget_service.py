@@ -1,3 +1,18 @@
+# ==============================================================================
+# LOGIC OVERVIEW:
+# Evaluates project budget caps and spending thresholds.
+# Runs periodically via the background worker to catch overages before bills explode.
+#
+# CORE CODE HIGHLIGHTS:
+# - calculate_period_bounds(): Computes start and end timestamps for daily, weekly,
+#   monthly, or rolling_24h evaluation windows.
+# - evaluate_budget():
+#   1. Sums actual period usage (spend, tokens, or requests).
+#   2. Calculates current percentage against budget cap.
+#   3. Deduplication Check: Queries AlertDelivery to ensure an alert is sent ONLY ONCE
+#      per threshold per billing period (avoids notification spam).
+# ==============================================================================
+
 from datetime import datetime, timedelta, timezone
 from typing import List, Tuple, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -5,6 +20,12 @@ from sqlalchemy import select, func, and_
 from app.models.models import Budget, UsageEvent, AlertDelivery
 from app.services.alert_service import AlertDeliveryService
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Billing Period Window Resolver
+# LOGIC:
+# Calculates precise UTC start/end boundaries for daily, weekly, monthly,
+# or rolling 24-hour cycles.
+# ------------------------------------------------------------------------------
 def calculate_period_bounds(period: str, now: Optional[datetime] = None) -> Tuple[datetime, datetime]:
     now = now or datetime.now(timezone.utc)
     if period == "daily":
@@ -22,6 +43,14 @@ def calculate_period_bounds(period: str, now: Optional[datetime] = None) -> Tupl
         end = (start + timedelta(days=32)).replace(day=1)
     return start, end
 
+# ------------------------------------------------------------------------------
+# CORE CODE: Budget Evaluation & Deduplicated Alerting
+# LOGIC:
+# 1. Queries sum of spend/tokens for the project inside current period.
+# 2. Compares percentage against configured thresholds (e.g. 50%, 80%, 100%, 120%).
+# 3. Executes deduplication check: If threshold already fired in this period, skip!
+# 4. Dispatches alert with severity ('info', 'warning', 'critical') to AlertDeliveryService.
+# ------------------------------------------------------------------------------
 class BudgetEvaluationService:
     @staticmethod
     async def evaluate_budget(db: AsyncSession, budget: Budget) -> List[AlertDelivery]:
