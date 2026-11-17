@@ -7,9 +7,35 @@ Run this script while viewing http://localhost:3000 to see live events arrive!
 import os
 import time
 import random
-import requests
+import json
+try:
+    import httpx
+    def post_json(url, data, headers):
+        with httpx.Client(timeout=10.0) as client:
+            r = client.post(url, json=data, headers=headers)
+            return r.status_code, r.text
+except ImportError:
+    try:
+        import requests
+        def post_json(url, data, headers):
+            r = requests.post(url, json=data, headers=headers, timeout=10.0)
+            return r.status_code, r.text
+    except ImportError:
+        import urllib.request
+        def post_json(url, data, headers):
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(data).encode("utf-8"),
+                headers=headers,
+                method="POST"
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=10.0) as resp:
+                    return resp.getcode(), resp.read().decode("utf-8")
+            except urllib.error.HTTPError as e:
+                return e.code, e.read().decode("utf-8")
 
-API_ENDPOINT = os.getenv("PACE_API_ENDPOINT", "http://localhost:8001/v1/ingest/events")
+API_ENDPOINT = os.getenv("PACE_API_ENDPOINT", "http://localhost:8000/v1/ingest/events")
 API_KEY = os.getenv("PACE_API_KEY", "pace_lkPaI8cxPobhSAH7wwQbLWUro16FwdpIWu_7nICvs4g")
 
 MODELS = [
@@ -54,15 +80,15 @@ def main():
         count = 1
         while True:
             batch = [generate_event(i) for i in range(random.randint(1, 3))]
-            res = requests.post(API_ENDPOINT, json={"events": batch}, headers=headers)
+            status_code, text = post_json(API_ENDPOINT, {"events": batch}, headers)
 
-            if res.status_code == 202 or res.status_code == 200:
+            if status_code in (200, 202):
                 for evt in batch:
                     status_icon = "✅" if evt['status_code'] == 200 else ("🟡 429" if evt['status_code'] == 429 else "🔴 500")
                     print(f"[{count}] {status_icon} {evt['provider']}/{evt['model']} — {evt['input_tokens']}in / {evt['output_tokens']}out — {evt['latency_ms']}ms")
                     count += 1
             else:
-                print(f"❌ Failed to ingest: {res.status_code} {res.text}")
+                print(f"❌ Failed to ingest: {status_code} {text}")
 
             time.sleep(random.uniform(1.5, 3.0))
     except KeyboardInterrupt:

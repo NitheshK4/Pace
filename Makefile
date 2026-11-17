@@ -1,9 +1,13 @@
-.PHONY: help verify test-api test-proxy test-python-sdk test-typescript-sdk test-php-sdk test-sdks typecheck-web build-web verify-docker clean quick-check lint-python verify-python-sdk
+.PHONY: help dev run run-api run-web verify test-api test-proxy test-python-sdk test-typescript-sdk test-php-sdk test-sdks typecheck-web build-web verify-docker clean quick-check lint-python verify-python-sdk
 
 VENV_PYTEST ?= ./.venv/bin/pytest
 
 help: ## Display available local verification targets
-	@echo "Pace Local Verification Commands:"
+	@echo "Pace Local Commands:"
+	@echo "  ./run.sh                  Run both API and Web concurrently"
+	@echo "  make dev                  Run both API and Web concurrently"
+	@echo "  make run-api              Run FastAPI backend on port 8000"
+	@echo "  make run-web              Run Next.js frontend on port 3000"
 	@echo "  make verify               Run complete verification suite (API, Proxy, SDKs, Web, Docker)"
 	@echo "  make quick-check          Run fast unit tests and web typecheck"
 	@echo "  make lint-python          Run Python syntax checks"
@@ -16,6 +20,17 @@ help: ## Display available local verification targets
 	@echo "  make typecheck-web        Typecheck the Next.js web app"
 	@echo "  make build-web            Build the Next.js web app"
 	@echo "  make verify-docker        Validate Docker Compose configuration"
+
+dev: ## Run both API and Web
+	./run.sh
+
+run: dev
+
+run-api: ## Run FastAPI backend on port 8000
+	PYTHONPATH=apps/api ./.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+run-web: ## Run Next.js frontend on port 3000
+	cd apps/web && npm run dev
 
 lint-python:
 	./.venv/bin/python -m py_compile apps/api/app/main.py packages/python-sdk/pace/__init__.py packages/proxy/pace_proxy/server.py
